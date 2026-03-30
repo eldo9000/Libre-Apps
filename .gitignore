@@ -1,18 +1,21 @@
-# Build and Release Folders
-bin-debug/
-bin-release/
-[Oo]bj/
-[Bb]in/
+# macOS
+.DS_Store
+**/.DS_Store
+*.swp
+*.swo
+*~
 
-# Other files and folders
-.settings/
+# Build artifacts
+output/
+.build-work/
+*.iso
+*.log
 
-# Executables
-*.swf
-*.air
-*.ipa
-*.apk
+# IDE
+.vscode/
+.idea/
 
-# Project files, i.e. `.project`, `.actionScriptProperties` and `.flexProperties`
-# should NOT be excluded as they contain compiler settings and other important
-# information for Eclipse / Flash Builder.
+# Temporary
+*.tmp
+*.temp
+/tmp/
