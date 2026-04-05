@@ -1,0 +1,20 @@
+[package]
+name = "prism"
+version = "0.1.0"
+description = "Prism — LibreWin all-in-one media viewer"
+authors = ["LibreWin"]
+edition = "2021"
+rust-version = "1.77"
+
+[lib]
+name = "prism_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+

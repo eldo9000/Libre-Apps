@@ -1,0 +1,14 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "remote-window-controls",
+  "description": "Allow external pages loaded in the WebView to call window control commands (close/minimize/maximize). Required so the injected toolbar works on external sites.",
+  "windows": ["main"],
+  "remote": {
+    "urls": ["https://**", "http://**"]
+  },
+  "permissions": [
+    "core:window:allow-close",
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize"
+  ]
+}

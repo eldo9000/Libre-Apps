@@ -1,24 +1,48 @@
 # The Freedom Apps
 
-A minimal set of reliable, lightweight apps. These aren't trying to compete with the software you'll install later — they're a dependable foundation that works offline, on any hardware, from day one, with a wide range of compatability.
+A minimal set of reliable, lightweight apps for [LibreWin OS](https://github.com/AncientKing37/Librewin-OS). These aren't trying to compete with the software you'll install later — they're a dependable foundation that works offline, on any hardware, from day one, with a wide range of compatibility.
 
-### Markdown Notes
-The note-taking app that gets out of your way. Opens instantly, saves automatically, speaks Markdown natively. The modern Notepad you always wanted.
+Built with **Tauri 2 + Rust + Svelte 5**. No Electron. No Node runtime. ~3MB per binary.
 
-### Simple Web
-A no-frills built-in browser for when you need to grab something from the web before your real browser is set up. Reliable, lightweight, always there.
+---
 
-### Media Viewer
+### Shelf — File Manager
+Your filesystem, your way. Tags backed by extended attributes, dual-pane layout, multi-tab, keyboard-driven navigation, instant search. Global Super+E shortcut summons it from anywhere. Built-in archive support (ZIP, 7Z, TAR) and quick media conversion via Splice presets.
+
+### Stack — Markdown Editor
+The note-taking app that gets out of your way. Opens instantly, saves automatically, speaks Markdown natively. CodeMirror 6 editor with live outline, multi-tab, export to HTML/TXT/PDF. The modern Notepad you always wanted.
+
+### Prism — Media Viewer
 Open anything. Images, video, audio, PDFs, 3D models, and hundreds of other formats — all in one app, no plugins, no codecs to hunt down. Think macOS Quick Look, but for everything.
 
-### Media Editor
-Convert, resize, and process media without leaving your desktop. Convert a 200MB video to MP4. Batch-resize 50 photos to thumbnails. Extract audio. Turn a folder of images into a PDF. Right-click in Quick Files and pick a preset (YouTube-ready video, web-size images, high-quality audio) — it converts in the background while you work. No command line, no hunt for the right tool, no "which format should I use?" confusion. Supports everything FFmpeg does, which is everything.
+### Splice — Media Converter
+Convert, resize, and process media without leaving your desktop. Convert a 200MB video to MP4. Batch-resize 50 photos. Extract audio. Right-click in Shelf and pick a preset — it converts in the background while you work. Supports everything FFmpeg does, which is everything.
 
-### Quick Files
-A file manager built for people who live in their filesystem. Tags, dual-pane, keyboard-driven, instant search, and a one-keystroke popup that brings your files to you no matter what you're doing.
+### Ghost — Privacy Browser
+A no-frills built-in browser for when you need to grab something from the web before your real browser is set up. Stateless by default — no history, no cookies after close. Reliable, lightweight, always there.
 
-### OS Agent
-Ask your computer to do things. "Find all my PDFs from last month and zip them." "Why is my machine slow?" It reads your system, runs the fix, and explains what it did. Runs entirely offline — no cloud, no account, no data leaving your machine. Off by default; enable it when you're ready.
+---
 
-### Command Console
-A clean, fast terminal for when you need one. No bloat, no built-in multiplexer — just a solid shell window that stays out of the way until you need it.
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | Tauri 2 |
+| Frontend | Svelte 5 + Tailwind CSS 4 |
+| Backend | Rust (edition 2021) |
+| Build | Vite 8 |
+| Font | Geist |
+
+## Development
+
+```bash
+cd apps/{shelf,stack,prism,splice,ghost}
+npm install
+npm run tauri dev
+```
+
+Requires: Rust 1.77+, Node 22+.
+
+## License
+
+GPL-3.0 — see [LICENSE](LICENSE).

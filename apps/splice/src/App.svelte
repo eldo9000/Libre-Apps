@@ -1,0 +1,536 @@
+<script>
+  import { getCurrentWindow } from '@tauri-apps/api/window';
+  import { invoke } from '@tauri-apps/api/core';
+  import { listen } from '@tauri-apps/api/event';
+  import { onMount, onDestroy } from 'svelte';
+  import Queue from './lib/Queue.svelte';
+  import ImageOptions from './lib/ImageOptions.svelte';
+  import VideoOptions from './lib/VideoOptions.svelte';
+  import AudioOptions from './lib/AudioOptions.svelte';
+
+  const appWindow = getCurrentWindow();
+
+  // ── State ──────────────────────────────────────────────────────────────────
+
+  // Queue: array of { id, path, name, ext, mediaType, status, percent, error }
+  let queue = $state([]);
+  let activeTab = $state('image'); // 'image' | 'video' | 'audio'
+  let converting = $state(false);
+  let overallPercent = $state(0);
+  let statusMessage = $state('');
+
+  // Options state (shared across tabs, components read/write via bind)
+  let imageOptions = $state({
+    output_format: 'webp',
+    resize_mode: 'none',
+    resize_percent: 100,
+    resize_width: 1920,
+    resize_height: 1080,
+    quality: 85,
+    crop_x: 0,
+    crop_y: 0,
+    crop_width: null,
+    crop_height: null,
+    rotation: 0,
+    flip_h: false,
+    flip_v: false,
+    auto_rotate: true,
+    output_dir: null,
+  });
+
+  let videoOptions = $state({
+    output_format: 'mp4',
+    codec: 'h264',
+    resolution: 'original',
+    trim_start: null,
+    trim_end: null,
+    remove_audio: false,
+    extract_audio: false,
+    audio_format: 'mp3',
+    bitrate: 192,
+    sample_rate: 48000,
+    output_dir: null,
+  });
+
+  let audioOptions = $state({
+    output_format: 'mp3',
+    bitrate: 192,
+    sample_rate: 44100,
+    normalize_loudness: false,
+    trim_start: null,
+    trim_end: null,
+    output_dir: null,
+  });
+
+  // ── Event listeners ────────────────────────────────────────────────────────
+
+  let unlistenProgress, unlistenDone, unlistenError;
+
+  onMount(async () => {
+    // Theme + accent
+    const theme = await invoke('get_theme');
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    document.documentElement.classList.toggle('dark',
+      theme === 'dark' || (theme === 'system' && mq.matches));
+    const accent = await invoke('get_accent');
+    document.documentElement.style.setProperty('--accent', accent);
+    const handler = async (e) => {
+      const t = await invoke('get_theme');
+      if (t === 'system') document.documentElement.classList.toggle('dark', e.matches);
+    };
+    mq.addEventListener('change', handler);
+
+    // Tauri events from convert_file background threads
+    unlistenProgress = await listen('job-progress', ({ payload }) => {
+      const item = queue.find(q => q.id === payload.job_id);
+      if (item) {
+        item.status = 'converting';
+        item.percent = payload.percent;
+        statusMessage = payload.message;
+      }
+      // Overall = average of all converting/done
+      updateOverall();
+    });
+
+    unlistenDone = await listen('job-done', ({ payload }) => {
+      const item = queue.find(q => q.id === payload.job_id);
+      if (item) {
+        item.status = 'done';
+        item.percent = 100;
+        item.outputPath = payload.output_path;
+      }
+      updateOverall();
+      checkAllDone();
+    });
+
+    unlistenError = await listen('job-error', ({ payload }) => {
+      const item = queue.find(q => q.id === payload.job_id);
+      if (item) {
+        item.status = 'error';
+        item.error = payload.message;
+      }
+      updateOverall();
+      checkAllDone();
+    });
+
+    return () => mq.removeEventListener('change', handler);
+
+    loadPresets();
+  });
+
+  onDestroy(() => {
+    unlistenProgress?.();
+    unlistenDone?.();
+    unlistenError?.();
+  });
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  function updateOverall() {
+    if (queue.length === 0) { overallPercent = 0; return; }
+    const total = queue.reduce((sum, q) => sum + (q.percent ?? 0), 0);
+    overallPercent = total / queue.length;
+  }
+
+  function checkAllDone() {
+    const pending = queue.filter(q => q.status === 'converting' || q.status === 'pending');
+    if (pending.length === 0) {
+      converting = false;
+      statusMessage = `Done — ${queue.filter(q => q.status === 'done').length} file(s) converted`;
+    }
+  }
+
+  // Add files to queue (called from Queue component drop handler or file picker)
+  async function addFiles(paths) {
+    for (const path of paths) {
+      const name = path.split('/').pop() ?? path;
+      const ext = name.includes('.') ? name.split('.').pop().toLowerCase() : '';
+      const mt = mediaTypeFor(ext);
+      const id = crypto.randomUUID();
+      queue.push({ id, path, name, ext, mediaType: mt, status: 'pending', percent: 0 });
+    }
+    // Auto-switch tab to dominant media type
+    const types = queue.map(q => q.mediaType);
+    if (types.every(t => t === 'image')) activeTab = 'image';
+    else if (types.every(t => t === 'video')) activeTab = 'video';
+    else if (types.every(t => t === 'audio')) activeTab = 'audio';
+  }
+
+  function mediaTypeFor(ext) {
+    const images = ['jpg','jpeg','png','webp','tiff','tif','bmp','gif','avif','heic','heif','psd','svg','ico','raw','cr2','nef','arw','dng'];
+    const videos = ['mp4','mkv','webm','avi','mov','m4v','flv','wmv','ts','mpg','mpeg','3gp','ogv'];
+    const audios = ['mp3','wav','flac','ogg','aac','opus','m4a','wma','aiff'];
+    if (images.includes(ext)) return 'image';
+    if (videos.includes(ext)) return 'video';
+    if (audios.includes(ext)) return 'audio';
+    return 'unknown';
+  }
+
+  function removeItem(id) {
+    queue = queue.filter(q => q.id !== id);
+    updateOverall();
+  }
+
+  function clearQueue() {
+    queue = [];
+    overallPercent = 0;
+    statusMessage = '';
+    converting = false;
+  }
+
+  // ── Convert ────────────────────────────────────────────────────────────────
+
+  async function startConvert() {
+    const pending = queue.filter(q => q.status === 'pending' || q.status === 'error');
+    if (pending.length === 0) return;
+
+    converting = true;
+    statusMessage = 'Converting…';
+
+    for (const item of pending) {
+      item.status = 'converting';
+      item.percent = 0;
+
+      // Build options object based on file's media type
+      let opts;
+      if (item.mediaType === 'image') {
+        opts = { ...imageOptions, output_suffix: outputSuffix };
+      } else if (item.mediaType === 'video') {
+        opts = { ...videoOptions, output_suffix: outputSuffix };
+      } else {
+        opts = { ...audioOptions, output_suffix: outputSuffix };
+      }
+
+      // Fire and forget — progress comes back via events
+      invoke('convert_file', {
+        jobId: item.id,
+        inputPath: item.path,
+        options: opts,
+      }).catch(err => {
+        item.status = 'error';
+        item.error = String(err);
+        checkAllDone();
+      });
+    }
+  }
+
+  // ── Drag over window ───────────────────────────────────────────────────────
+
+  // Output suffix (shared across all media types)
+  let outputSuffix = $state('converted');
+
+  // ── Custom presets ─────────────────────────────────────────────────────────
+
+  let presets = $state([]);
+  let presetsOpen = $state(false);
+  let presetSaving = $state(false);
+  let presetNameInput = $state('');
+
+  async function loadPresets() {
+    try { presets = await invoke('list_presets'); } catch (_) {}
+  }
+
+  async function savePreset() {
+    const name = presetNameInput.trim();
+    if (!name) return;
+    const tab = activeTab;
+    let src = tab === 'image' ? imageOptions : tab === 'video' ? videoOptions : audioOptions;
+    try {
+      const saved = await invoke('save_preset', {
+        name,
+        mediaType: tab,
+        outputFormat: src.output_format,
+        quality: tab === 'image' ? src.quality : null,
+        codec: tab === 'video' ? src.codec : null,
+        bitrate: (tab === 'video' || tab === 'audio') ? src.bitrate : null,
+        sampleRate: (tab === 'video' || tab === 'audio') ? src.sample_rate : null,
+      });
+      presets = [...presets, saved];
+      presetNameInput = '';
+      presetSaving = false;
+    } catch (e) {
+      console.error('Save preset failed:', e);
+    }
+  }
+
+  async function deletePreset(id) {
+    try {
+      await invoke('delete_preset', { id });
+      presets = presets.filter(p => p.id !== id);
+    } catch (e) {
+      console.error('Delete preset failed:', e);
+    }
+  }
+
+  function loadPresetIntoOptions(preset) {
+    if (preset.media_type === 'image') {
+      imageOptions.output_format = preset.output_format;
+      if (preset.quality != null) imageOptions.quality = preset.quality;
+      activeTab = 'image';
+    } else if (preset.media_type === 'video') {
+      videoOptions.output_format = preset.output_format;
+      if (preset.codec != null) videoOptions.codec = preset.codec;
+      if (preset.bitrate != null) videoOptions.bitrate = preset.bitrate;
+      if (preset.sample_rate != null) videoOptions.sample_rate = preset.sample_rate;
+      activeTab = 'video';
+    } else {
+      audioOptions.output_format = preset.output_format;
+      if (preset.bitrate != null) audioOptions.bitrate = preset.bitrate;
+      if (preset.sample_rate != null) audioOptions.sample_rate = preset.sample_rate;
+      activeTab = 'audio';
+    }
+    presetsOpen = false;
+  }
+
+  let dragOver = $state(false);
+
+  function onWindowDragover(e) {
+    e.preventDefault();
+    dragOver = true;
+  }
+  function onWindowDragleave(e) {
+    if (!e.relatedTarget) dragOver = false;
+  }
+  function onWindowDrop(e) {
+    e.preventDefault();
+    dragOver = false;
+    const paths = Array.from(e.dataTransfer?.files ?? []).map(f => f.path ?? f.name);
+    if (paths.length) addFiles(paths);
+  }
+</script>
+
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div
+  class="relative flex flex-col h-full bg-[var(--surface)] overflow-hidden"
+  ondragover={onWindowDragover}
+  ondragleave={onWindowDragleave}
+  ondrop={onWindowDrop}
+>
+
+  <!-- Resize strip -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div
+    class="absolute top-[8px] left-0 right-0 h-[4px] z-50 cursor-n-resize"
+    onmousedown={(e) => { e.preventDefault(); appWindow.startResizeDragging('North'); }}
+  ></div>
+
+  <!-- Titlebar -->
+  <div
+    data-tauri-drag-region
+    class="h-8 bg-[var(--titlebar-bg)] border-b border-[var(--border)]
+           flex items-center shrink-0 select-none"
+  >
+    <!-- Icon + name -->
+    <div class="flex items-center gap-2 pl-3 flex-1 min-w-0" data-tauri-drag-region>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
+           class="text-[var(--accent)] shrink-0">
+        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="9" y1="15" x2="15" y2="15"/>
+        <line x1="12" y1="12" x2="12" y2="18"/>
+      </svg>
+      <span class="text-[13px] font-medium text-[var(--text-primary)] truncate">Splice</span>
+    </div>
+
+    <!-- Window controls -->
+    <div class="flex items-center shrink-0 h-full">
+      <button onclick={() => appWindow.minimize()}
+        class="w-11 h-full flex items-center justify-center text-[var(--text-secondary)]
+               hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-[16px] leading-none"
+        title="Minimize" aria-label="Minimize">─</button>
+      <button onclick={() => appWindow.toggleMaximize()}
+        class="w-11 h-full flex items-center justify-center text-[var(--text-secondary)]
+               hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-[13px]"
+        title="Maximize" aria-label="Maximize">□</button>
+      <button onclick={() => appWindow.close()}
+        class="w-11 h-full flex items-center justify-center text-[var(--text-secondary)]
+               hover:bg-red-500 hover:text-white transition-colors text-[18px]"
+        title="Close" aria-label="Close">×</button>
+    </div>
+  </div>
+
+  <!-- Body: queue sidebar + main panel -->
+  <div class="flex flex-1 min-h-0">
+
+    <!-- Left: Queue -->
+    <aside class="w-64 shrink-0 border-r border-[var(--border)] flex flex-col bg-[var(--surface-raised)]"
+           role="region" aria-label="File queue">
+      <Queue
+        {queue}
+        on:add={(e) => addFiles(e.detail)}
+        on:remove={(e) => removeItem(e.detail)}
+        on:clear={clearQueue}
+      />
+    </aside>
+
+    <!-- Right: options + action bar -->
+    <div class="flex flex-col flex-1 min-w-0">
+
+      <!-- Tab bar -->
+      <div class="flex border-b border-[var(--border)] bg-[var(--surface-raised)] shrink-0"
+           role="tablist" aria-label="Media type">
+        {#each [['image','Image'],['video','Video'],['audio','Audio']] as [id, label]}
+          <button
+            role="tab"
+            aria-selected={activeTab === id}
+            onclick={() => activeTab = id}
+            class="px-5 py-2 text-[13px] font-medium border-b-2 transition-colors
+              {activeTab === id
+                ? 'border-[var(--accent)] text-[var(--accent)]'
+                : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}"
+          >{label}</button>
+        {/each}
+      </div>
+
+      <!-- Options panel -->
+      <div class="flex-1 min-h-0 overflow-y-auto p-5" role="tabpanel">
+        {#if activeTab === 'image'}
+          <ImageOptions bind:options={imageOptions} />
+        {:else if activeTab === 'video'}
+          <VideoOptions bind:options={videoOptions} />
+        {:else}
+          <AudioOptions bind:options={audioOptions} />
+        {/if}
+      </div>
+
+      <!-- Presets popover (sits above the action bar) -->
+      {#if presetsOpen}
+        <div class="fixed inset-0 z-30" aria-hidden="true" onclick={() => { presetsOpen = false; presetSaving = false; }}></div>
+        <div class="absolute bottom-[52px] right-4 z-40 w-64
+                    bg-[var(--surface-raised)] border border-[var(--border)]
+                    rounded-lg shadow-lg overflow-hidden">
+
+          <!-- Saved presets for active tab -->
+          {#each presets.filter(p => p.media_type === activeTab) as p (p.id)}
+            <div class="flex items-center gap-1 px-3 py-1.5 hover:bg-[var(--surface)] group">
+              <button
+                onclick={() => loadPresetIntoOptions(p)}
+                class="flex-1 text-left text-[12px] text-[var(--text-primary)] truncate"
+                title="Load preset: {p.name}"
+              >{p.name}</button>
+              <button
+                onclick={() => deletePreset(p.id)}
+                class="shrink-0 w-5 h-5 flex items-center justify-center rounded
+                       text-[var(--text-secondary)] opacity-0 group-hover:opacity-100
+                       hover:text-red-500 transition-all text-[13px]"
+                aria-label="Delete preset {p.name}"
+              >×</button>
+            </div>
+          {:else}
+            <p class="px-3 py-2 text-[12px] text-[var(--text-secondary)]">
+              No {activeTab} presets yet
+            </p>
+          {/each}
+
+          <div class="border-t border-[var(--border)]">
+            {#if presetSaving}
+              <!-- Save form -->
+              <div class="flex items-center gap-1.5 px-3 py-2">
+                <!-- svelte-ignore a11y_autofocus -->
+                <input
+                  type="text"
+                  bind:value={presetNameInput}
+                  placeholder="Preset name"
+                  aria-label="Preset name"
+                  autofocus
+                  onkeydown={(e) => { if (e.key === 'Enter') savePreset(); if (e.key === 'Escape') { presetSaving = false; presetNameInput = ''; } }}
+                  class="flex-1 px-2 py-1 text-[12px] rounded border border-[var(--border)]
+                         bg-[var(--surface)] text-[var(--text-primary)] outline-none
+                         focus:border-[var(--accent)] transition-colors"
+                />
+                <button
+                  onclick={savePreset}
+                  class="px-2 py-1 text-[12px] rounded bg-[var(--accent)] text-white
+                         hover:opacity-90 transition-opacity shrink-0"
+                >Save</button>
+              </div>
+            {:else}
+              <button
+                onclick={() => { presetSaving = true; presetNameInput = ''; }}
+                class="w-full text-left px-3 py-2 text-[12px] text-[var(--accent)]
+                       hover:bg-[var(--surface)] transition-colors"
+              >+ Save current as preset…</button>
+            {/if}
+          </div>
+        </div>
+      {/if}
+
+      <!-- Action bar -->
+      <div class="relative shrink-0 border-t border-[var(--border)] px-5 py-3 flex items-center gap-4
+                  bg-[var(--surface-raised)]">
+
+        <!-- Status + progress -->
+        <div class="flex-1 min-w-0">
+          <div aria-live="polite" aria-atomic="true">
+            {#if statusMessage}
+              <p class="text-[12px] text-[var(--text-secondary)] truncate mb-1">{statusMessage}</p>
+            {/if}
+          </div>
+          {#if converting || overallPercent > 0}
+            <div class="h-1.5 rounded-full bg-[var(--border)] overflow-hidden">
+              <div
+                class="h-full bg-[var(--accent)] transition-all duration-300 rounded-full"
+                style="width: {overallPercent}%"
+              ></div>
+            </div>
+          {/if}
+        </div>
+
+        <!-- Suffix input -->
+        <div class="flex items-center gap-1.5 shrink-0">
+          <label for="output-suffix"
+                 class="text-[12px] text-[var(--text-secondary)] whitespace-nowrap">
+            Suffix
+          </label>
+          <input
+            id="output-suffix"
+            type="text"
+            bind:value={outputSuffix}
+            disabled={converting}
+            placeholder="converted"
+            class="w-28 px-2 py-1 text-[12px] rounded border border-[var(--border)]
+                   bg-[var(--surface)] text-[var(--text-primary)] outline-none
+                   focus:border-[var(--accent)] transition-colors
+                   disabled:opacity-50 font-mono"
+            aria-label="Output filename suffix"
+          />
+        </div>
+
+        <!-- Presets button -->
+        <button
+          onclick={() => { presetsOpen = !presetsOpen; presetSaving = false; }}
+          class="px-3 py-1.5 rounded-md text-[13px] font-medium transition-colors shrink-0
+                 border border-[var(--border)] text-[var(--text-secondary)]
+                 hover:text-[var(--text-primary)] hover:border-[var(--accent)]
+                 {presetsOpen ? 'border-[var(--accent)] text-[var(--accent)]' : ''}"
+          aria-label="Presets"
+          title="Presets"
+        >Presets</button>
+
+        <!-- Convert button -->
+        <button
+          onclick={startConvert}
+          disabled={converting || queue.length === 0}
+          class="px-5 py-1.5 rounded-md text-[13px] font-medium transition-colors shrink-0
+            {converting || queue.length === 0
+              ? 'bg-[var(--border)] text-[var(--text-secondary)] cursor-not-allowed'
+              : 'bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)]'}"
+        >
+          {converting ? 'Converting…' : 'Convert'}
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Full-window drag overlay -->
+  {#if dragOver}
+    <div class="absolute inset-0 z-40 flex items-center justify-center
+                bg-[var(--accent)]/10 border-2 border-dashed border-[var(--accent)]
+                pointer-events-none rounded-sm">
+      <p class="text-[var(--accent)] text-lg font-medium">Drop files to add</p>
+    </div>
+  {/if}
+
+</div>

@@ -1,0 +1,16 @@
+[workspace]
+members = [
+    "shelf/src-tauri",
+    "stack/src-tauri",
+    "prism/src-tauri",
+    "splice/src-tauri",
+    "ghost/src-tauri",
+]
+resolver = "2"
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true
