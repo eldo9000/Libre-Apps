@@ -16,6 +16,21 @@ output/
 *.iso
 *.log
 
+# Rust / Tauri
+apps/target/
+**/src-tauri/target/
+**/src-tauri/WixTools/
+**/src-tauri/gen/
+
+# Node / frontend
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+
+# App binaries (fetched by OS build — not committed)
+apps/*/bin/
+
 # IDE
 .vscode/
 .idea/
