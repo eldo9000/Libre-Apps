@@ -1,0 +1,12 @@
+# Runtime OS packages required: xdg-utils
+[Desktop Entry]
+Name=Shelf
+Comment=LibreWin file manager — tags, dual-pane, keyboard-driven
+Exec=env WEBKIT_DISABLE_DMABUF_RENDERER=1 shelf %U
+Icon=io.librewin.shelf
+Terminal=false
+Type=Application
+Categories=System;FileManager;
+Keywords=files;folders;manager;shelf;browser;
+MimeType=inode/directory;
+StartupNotify=true

@@ -185,6 +185,45 @@ document.documentElement.style.setProperty('--accent', accent);
 
 ---
 
+## LibreWin OS Integration Contract
+
+Each release of this repo publishes these assets for every app:
+- `{app}-x86_64` and `{app}-aarch64` — the Tauri binaries
+- `{app}.desktop` — `.desktop` file and MIME type declarations (source of truth for OS integration)
+
+**The `.desktop` file is the contract between this repo and LibreWin-OS.**
+`LibreWin-OS/build/fetch-apps.sh` downloads it alongside the binary and installs it into the ISO.
+
+### When you change OS integration for an app:
+1. Edit `apps/{app}/io.librewin.{app}.desktop` — this is the source of truth
+2. Tag a new release — the CI uploads it automatically
+3. No changes needed in LibreWin-OS (it will pick up the new file on next build)
+
+### When an app gains a new system runtime dependency:
+1. Add/update the `# Runtime OS packages: ...` comment at the top of `apps/{app}/io.librewin.{app}.desktop`
+2. **Also open a PR in `eldo9000/LibreWin-OS`** to add the package to `build/modules/packages.sh`
+   under the "Freedom App runtime deps" comment block. The OS won't install deps it doesn't know about.
+
+### Binary install names (do not rename without updating LibreWin-OS `apps.sh`/`branding.sh`):
+| App | Installed as in `/usr/local/bin/` |
+|-----|----------------------------------|
+| shelf | `shelf` |
+| ghost | `ghost` |
+| prism | `librewin-prism` |
+| stack | `librewin-stack` |
+| splice | `splice` |
+
+### Local development:
+```bash
+cd apps/{name}
+npm install
+npx tauri dev
+```
+Runs the full app natively on macOS or Linux. Linux-specific system calls (kscreen-doctor, nmcli, etc.)
+are only in Settings — all Freedom Apps work on macOS for development purposes.
+
+---
+
 ## Workflow
 
 - **Don't burn tokens reading entire codebases** — read this file and app-specific docs first. Only dive into code for specific tasks.

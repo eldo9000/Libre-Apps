@@ -148,10 +148,41 @@ jobs:
           path: ${{ matrix.app }}-aarch64
           retention-days: 1
 
+  # ── Collect .desktop files (arch-independent, fetched from source) ─────────
+  collect-desktop-files:
+    name: Collect .desktop files
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Bundle .desktop files
+        run: |
+          mkdir -p desktop-files
+          for app in shelf prism stack ghost splice; do
+            SRC="apps/$app/io.librewin.$app.desktop"
+            if [[ -f "$SRC" ]]; then
+              cp "$SRC" "desktop-files/$app.desktop"
+              echo "Bundled: $app.desktop"
+            else
+              echo "WARNING: $SRC not found — skipping"
+            fi
+          done
+          ls -lh desktop-files/
+
+      - name: Upload .desktop files artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: desktop-files
+          path: desktop-files/
+          retention-days: 1
+
   # ── Publish GitHub Release ────────────────────────────────────────────────
   release:
     name: Publish Release
-    needs: [build-x86_64, build-aarch64]
+    needs: [build-x86_64, build-aarch64, collect-desktop-files]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
 
@@ -178,15 +209,16 @@ jobs:
           gh release create "$TAG" \
             --repo "$GITHUB_REPOSITORY" \
             --title "The Freedom Apps $TAG" \
-            --notes "Built from tag $TAG. Binaries for x86_64 and aarch64 — consumed by the LibreWin OS build system via \`build/fetch-apps.sh\`." \
+            --notes "Built from tag $TAG. Binaries for x86_64 and aarch64, plus .desktop files — consumed by the LibreWin OS build system via \`build/fetch-apps.sh\`." \
             --verify-tag
 
-          # Upload each binary
+          # Upload binaries
           for artifact_dir in dist/*/; do
             ARTIFACT_NAME=$(basename "$artifact_dir")
+            [[ "$ARTIFACT_NAME" == "desktop-files" ]] && continue
             BINARY="$artifact_dir/$ARTIFACT_NAME"
             if [[ -f "$BINARY" ]]; then
-              echo "Uploading: $ARTIFACT_NAME"
+              echo "Uploading binary: $ARTIFACT_NAME"
               gh release upload "$TAG" "$BINARY" \
                 --repo "$GITHUB_REPOSITORY" \
                 --clobber
@@ -194,6 +226,15 @@ jobs:
               echo "WARNING: Expected $BINARY but not found"
               ls "$artifact_dir" || true
             fi
+          done
+
+          # Upload .desktop files
+          for desktop in dist/desktop-files/*.desktop; do
+            [[ -f "$desktop" ]] || continue
+            echo "Uploading desktop: $(basename $desktop)"
+            gh release upload "$TAG" "$desktop" \
+              --repo "$GITHUB_REPOSITORY" \
+              --clobber
           done
 
           echo "Release $TAG published."

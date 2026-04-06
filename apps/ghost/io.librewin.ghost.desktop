@@ -1,0 +1,12 @@
+# Runtime OS packages: none (WebKitGTK bundled via Tauri)
+[Desktop Entry]
+Name=Ghost
+Comment=LibreWin private browser — no trace, ever
+Exec=ghost %U
+Icon=io.librewin.ghost
+Terminal=false
+Type=Application
+Categories=Network;WebBrowser;
+Keywords=browser;web;private;ghost;internet;
+MimeType=text/html;text/xml;application/xhtml+xml;application/xml;x-scheme-handler/http;x-scheme-handler/https;
+StartupNotify=true
