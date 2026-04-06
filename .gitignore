@@ -1,23 +1,18 @@
 # macOS
 .DS_Store
 **/.DS_Store
-._*
 *.swp
 *.swo
 *~
+._*
+**/._*
+.DS_Store
+**/.DS_Store
 
-# Node
-node_modules/
-dist/
-.vite/
-
-# Rust / Tauri
-target/
-*.rs.bk
 
 # Build artifacts
-bin/
 output/
+.build-work/
 *.iso
 *.log
 
@@ -29,7 +24,3 @@ output/
 *.tmp
 *.temp
 /tmp/
-
-# Environment
-.env
-.env.*
