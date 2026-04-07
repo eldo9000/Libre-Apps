@@ -18,7 +18,7 @@ The Freedom Apps are a minimal set of reliable, lightweight desktop apps that sh
 | **Stack** | Markdown editor | The note-taking app that gets out of your way |
 | **Prism** | Media viewer | Open anything — images, video, audio, PDF, 3D models |
 | **Splice** | Media converter | Convert, resize, and process media without leaving your desktop |
-| **Ghost** | Privacy browser | A no-frills built-in browser for when you need the web |
+| **Ghost** | Identity-randomizing browser | Leaves no imprint — randomized fingerprint and identity every session, websites can't profile you |
 
 **This repo is standalone.** It is not part of the LibreWin-OS repo. Apps are developed here and integrated into the OS via the ISO build pipeline.
 
@@ -231,3 +231,4 @@ are only in Settings — all Freedom Apps work on macOS for development purposes
 - **Commit at least once per milestone** — don't let work accumulate.
 - **Update milestone docs** when completing work — mark tasks done, note any discoveries.
 - **Check `docs/ROADMAP.md`** to understand where each app stands before starting work.
+

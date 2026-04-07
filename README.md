@@ -18,8 +18,8 @@ Open anything. Images, video, audio, PDFs, 3D models, and hundreds of other form
 ### Splice — Media Converter
 Convert, resize, and process media without leaving your desktop. Convert a 200MB video to MP4. Batch-resize 50 photos. Extract audio. Right-click in Shelf and pick a preset — it converts in the background while you work. Supports everything FFmpeg does, which is everything.
 
-### Ghost — Privacy Browser
-A no-frills built-in browser for when you need to grab something from the web before your real browser is set up. Stateless by default — no history, no cookies after close. Reliable, lightweight, always there.
+### Ghost — The browser that leaves no imprint
+Every session starts as a new, unrecognizable browser. Randomized fingerprint, spoofed identity, WebRTC disabled — websites don't know who you are and can't connect one visit to another. Not incognito (that just clears local history). Ghost changes what the web sees about you. Stateless by default, always there, starts instantly.
 
 ---
 
