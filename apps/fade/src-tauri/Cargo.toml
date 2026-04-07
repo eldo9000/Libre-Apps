@@ -1,13 +1,13 @@
 [package]
-name = "splice"
+name = "fade"
 version = "0.1.0"
-description = "Splice — LibreWin media converter"
+description = "Fade — LibreWin media converter"
 authors = ["LibreWin"]
 edition = "2021"
 rust-version = "1.77"
 
 [lib]
-name = "splice_lib"
+name = "fade_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

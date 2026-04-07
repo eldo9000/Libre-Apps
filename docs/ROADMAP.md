@@ -17,7 +17,7 @@ All five apps were built as prototypes inside `Librewin-OS/apps/` and have been 
 | **Shelf** | Beta | File browsing, tags, dual-pane, tabs, search, quick convert, Wine support | None | Archive support missing, no batch ops, no Shelf Mode |
 | **Stack** | Beta | CodeMirror editor, multi-tab, export HTML/TXT/PDF, outline panel | None | Search/Format panels are placeholders, no syntax highlighting, no live preview |
 | **Prism** | Beta | Image/video/audio/PDF/3D viewing, zoom, rotation, streaming protocol | None | No metadata viewer, no slideshow, no playlist |
-| **Splice** | Alpha | Image/video/audio conversion, batch queue, presets, progress reporting | None | No cancel/pause, no preview, no AI features, no parallel encoding |
+| **Fade** | Alpha | Image/video/audio conversion, batch queue, presets, progress reporting | None | No cancel/pause, no preview, no AI features, no parallel encoding |
 | **Ghost** | Alpha | Custom titlebar, address bar, navigation, download handler, search links | None | Privacy features NOT implemented (just relies on WebKitGTK defaults), no settings UI |
 
 **Common gaps across all apps:** Zero test coverage. No CI pipeline. No linting/formatting enforcement.
@@ -49,7 +49,7 @@ All five apps were built as prototypes inside `Librewin-OS/apps/` and have been 
 **Prism** → [docs/prism/M1.md](prism/M1.md)
 - M1: Metadata viewer + drag-and-drop + keyboard shortcut overlay
 
-**Splice** → [docs/splice/M1.md](splice/M1.md), [M2.md](splice/M2.md)
+**Fade** → [docs/fade/M1.md](fade/M1.md), [M2.md](fade/M2.md)
 - M1: Production hardening (cancel jobs, stderr logging, file info dialog)
 - M2: Preview + parallel encoding
 
@@ -74,7 +74,7 @@ All five apps were built as prototypes inside `Librewin-OS/apps/` and have been 
 **Prism** → [docs/prism/M2.md](prism/M2.md)
 - M2: Slideshow mode, playlist/queue, batch export
 
-**Splice** → [docs/splice/M3.md](splice/M3.md)
+**Fade** → [docs/fade/M3.md](fade/M3.md)
 - M3: AI features Phase 1 (noise removal, upscaling, auto-captions)
 
 **Ghost** → [docs/ghost/M3.md](ghost/M3.md)
@@ -99,7 +99,7 @@ Pro tiers come at $3–5 one-time purchase. The line between free and pro is the
 **Prism** → [docs/prism/M3.md](prism/M3.md)
 - M3: Pro features (annotation, RAW adjustments, advanced slideshow)
 
-**Splice** → [docs/splice/M4.md](splice/M4.md)
+**Fade** → [docs/fade/M4.md](fade/M4.md)
 - M4: AI features Phase 2 (stem separation, face restoration, frame interpolation, background removal)
 
 **Ghost** — No pro tier. Ghost stays free and minimal.

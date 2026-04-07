@@ -277,10 +277,10 @@ fn set_tags(path: String, tags: Vec<String>) -> Result<(), String> {
 
 // ── Quick Convert ─────────────────────────────────────────────────────────────
 
-// ── Splice custom presets ─────────────────────────────────────────────────────
+// ── Fade custom presets ─────────────────────────────────────────────────────
 
 #[derive(Serialize, Deserialize, Clone)]
-struct SplicePreset {
+struct FadePreset {
     id: String,
     name: String,
     media_type: String,
@@ -291,28 +291,28 @@ struct SplicePreset {
     sample_rate: Option<u32>,
 }
 
-fn splice_presets_path() -> String {
+fn fade_presets_path() -> String {
     let home = std::env::var("HOME").unwrap_or_default();
-    format!("{}/.config/librewin/splice-presets.json", home)
+    format!("{}/.config/librewin/fade-presets.json", home)
 }
 
 #[command]
-fn list_splice_presets() -> Vec<SplicePreset> {
-    std::fs::read_to_string(splice_presets_path())
+fn list_fade_presets() -> Vec<FadePreset> {
+    std::fs::read_to_string(fade_presets_path())
         .ok()
         .and_then(|s| serde_json::from_str(&s).ok())
         .unwrap_or_default()
 }
 
-/// Run a custom Splice preset — fire-and-forget, emits "quick-convert-done" or "quick-convert-error".
+/// Run a custom Fade preset — fire-and-forget, emits "quick-convert-done" or "quick-convert-error".
 #[command]
-fn run_splice_preset(window: tauri::Window, path: String, preset_id: String) -> Result<(), String> {
+fn run_fade_preset(window: tauri::Window, path: String, preset_id: String) -> Result<(), String> {
     let p = Path::new(&path);
     if !p.exists() {
         return Err(format!("File not found: {path}"));
     }
 
-    let presets: Vec<SplicePreset> = std::fs::read_to_string(splice_presets_path())
+    let presets: Vec<FadePreset> = std::fs::read_to_string(fade_presets_path())
         .ok()
         .and_then(|s| serde_json::from_str(&s).ok())
         .unwrap_or_default();
@@ -549,8 +549,8 @@ pub fn run() {
             get_wine_status,
             get_windows_path,
             quick_convert,
-            list_splice_presets,
-            run_splice_preset,
+            list_fade_presets,
+            run_fade_preset,
             get_theme,
             get_accent,
         ])

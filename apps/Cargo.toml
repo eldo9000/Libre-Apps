@@ -3,7 +3,7 @@ members = [
     "shelf/src-tauri",
     "stack/src-tauri",
     "prism/src-tauri",
-    "splice/src-tauri",
+    "fade/src-tauri",
     "ghost/src-tauri",
 ]
 resolver = "2"

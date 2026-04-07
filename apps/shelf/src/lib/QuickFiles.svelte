@@ -52,7 +52,7 @@
   let winepathFound = false;
   let wineprefixReady = false;
 
-  // Custom Splice presets
+  // Custom Fade presets
   let customPresets = [];
 
   // Toast
@@ -141,8 +141,8 @@
       updateTab({ error: String(e) });
     }
 
-    // Load custom Splice presets (best-effort — Splice may not be installed yet)
-    try { customPresets = await invoke('list_splice_presets'); } catch (_) {}
+    // Load custom Fade presets (best-effort — Fade may not be installed yet)
+    try { customPresets = await invoke('list_fade_presets'); } catch (_) {}
 
     // Quick Convert result notifications
     quickConvertUnlisten = await listen('quick-convert-done', ({ payload }) => {
@@ -401,11 +401,11 @@
     }
   }
 
-  async function runSplicePreset(item, presetId) {
+  async function runFadePreset(item, presetId) {
     hideContextMenu();
     showToast('Converting…');
     try {
-      await invoke('run_splice_preset', { path: item.path, presetId });
+      await invoke('run_fade_preset', { path: item.path, presetId });
     } catch (e) {
       showToast(`Convert failed: ${e}`);
     }
@@ -860,14 +860,14 @@
       </button>
     {/each}
 
-    <!-- Custom Splice presets -->
+    <!-- Custom Fade presets -->
     {#each customPresetsFor(contextMenu.item.extension) as cp (cp.id)}
       <button
         class="w-full text-left px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300
                hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-        on:click={() => runSplicePreset(contextMenu.item, cp.id)}
+        on:click={() => runFadePreset(contextMenu.item, cp.id)}
       >
-        <span class="text-[var(--accent)] font-medium">Splice</span>
+        <span class="text-[var(--accent)] font-medium">Fade</span>
         <span>{cp.name}</span>
       </button>
     {/each}

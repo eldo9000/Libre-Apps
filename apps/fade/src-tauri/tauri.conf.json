@@ -1,7 +1,7 @@
 {
-  "productName": "Splice",
+  "productName": "Fade",
   "version": "0.1.0",
-  "identifier": "io.librewin.splice",
+  "identifier": "io.librewin.fade",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1427",
@@ -12,7 +12,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Splice",
+        "title": "Fade",
         "width": 980,
         "height": 660,
         "minWidth": 720,

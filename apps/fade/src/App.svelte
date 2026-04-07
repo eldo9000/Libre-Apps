@@ -330,7 +330,7 @@
         <line x1="9" y1="15" x2="15" y2="15"/>
         <line x1="12" y1="12" x2="12" y2="18"/>
       </svg>
-      <span class="text-[13px] font-medium text-[var(--text-primary)] truncate">Splice</span>
+      <span class="text-[13px] font-medium text-[var(--text-primary)] truncate">Fade</span>
     </div>
 
     <!-- Window controls -->

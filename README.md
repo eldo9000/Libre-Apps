@@ -7,7 +7,7 @@ Built with **Tauri 2 + Rust + Svelte 5**. No Electron. No Node runtime. ~3MB per
 ---
 
 ### Shelf — File Manager
-Your filesystem, your way. Tags backed by extended attributes, dual-pane layout, multi-tab, keyboard-driven navigation, instant search. Global Super+E shortcut summons it from anywhere. Built-in archive support (ZIP, 7Z, TAR) and quick media conversion via Splice presets.
+Your filesystem, your way. Tags backed by extended attributes, dual-pane layout, multi-tab, keyboard-driven navigation, instant search. Global Super+E shortcut summons it from anywhere. Built-in archive support (ZIP, 7Z, TAR) and quick media conversion via Fade presets.
 
 ### Stack — Markdown Editor
 The note-taking app that gets out of your way. Opens instantly, saves automatically, speaks Markdown natively. CodeMirror 6 editor with live outline, multi-tab, export to HTML/TXT/PDF. The modern Notepad you always wanted.
@@ -15,7 +15,7 @@ The note-taking app that gets out of your way. Opens instantly, saves automatica
 ### Prism — Media Viewer
 Open anything. Images, video, audio, PDFs, 3D models, and hundreds of other formats — all in one app, no plugins, no codecs to hunt down. Think macOS Quick Look, but for everything.
 
-### Splice — Media Converter
+### Fade — Media Converter
 Convert, resize, and process media without leaving your desktop. Convert a 200MB video to MP4. Batch-resize 50 photos. Extract audio. Right-click in Shelf and pick a preset — it converts in the background while you work. Supports everything FFmpeg does, which is everything.
 
 ### Ghost — The browser that leaves no imprint
@@ -36,7 +36,7 @@ Every session starts as a new, unrecognizable browser. Randomized fingerprint, s
 ## Development
 
 ```bash
-cd apps/{shelf,stack,prism,splice,ghost}
+cd apps/{shelf,stack,prism,fade,ghost}
 npm install
 npm run tauri dev
 ```

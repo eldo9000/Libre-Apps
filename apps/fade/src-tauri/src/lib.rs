@@ -606,7 +606,7 @@ fn get_accent() -> String {
 // ── Custom presets ────────────────────────────────────────────────────────────
 
 #[derive(Serialize, Deserialize, Clone)]
-pub struct SplicePreset {
+pub struct FadePreset {
     pub id: String,
     pub name: String,
     pub media_type: String,     // "image" | "video" | "audio"
@@ -619,10 +619,10 @@ pub struct SplicePreset {
 
 fn presets_path() -> String {
     let home = std::env::var("HOME").unwrap_or_default();
-    format!("{}/.config/librewin/splice-presets.json", home)
+    format!("{}/.config/librewin/fade-presets.json", home)
 }
 
-fn read_presets() -> Vec<SplicePreset> {
+fn read_presets() -> Vec<FadePreset> {
     let path = presets_path();
     std::fs::read_to_string(&path)
         .ok()
@@ -630,7 +630,7 @@ fn read_presets() -> Vec<SplicePreset> {
         .unwrap_or_default()
 }
 
-fn write_presets(presets: &[SplicePreset]) -> Result<(), String> {
+fn write_presets(presets: &[FadePreset]) -> Result<(), String> {
     let path = presets_path();
     // Ensure directory exists
     if let Some(dir) = std::path::Path::new(&path).parent() {
@@ -641,7 +641,7 @@ fn write_presets(presets: &[SplicePreset]) -> Result<(), String> {
 }
 
 #[command]
-fn list_presets() -> Vec<SplicePreset> {
+fn list_presets() -> Vec<FadePreset> {
     read_presets()
 }
 
@@ -654,7 +654,7 @@ fn save_preset(
     codec: Option<String>,
     bitrate: Option<u32>,
     sample_rate: Option<u32>,
-) -> Result<SplicePreset, String> {
+) -> Result<FadePreset, String> {
     // Validate name
     let name = name.trim().to_string();
     if name.is_empty() {
@@ -664,7 +664,7 @@ fn save_preset(
         return Err("Preset name too long (max 64 chars)".to_string());
     }
 
-    let preset = SplicePreset {
+    let preset = FadePreset {
         id: format!("{}", uuid_v4()),
         name,
         media_type,

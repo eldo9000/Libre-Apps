@@ -17,7 +17,7 @@ The Freedom Apps are a minimal set of reliable, lightweight desktop apps that sh
 | **Shelf** | File manager | Your filesystem, your way — tags, dual-pane, keyboard-driven |
 | **Stack** | Markdown editor | The note-taking app that gets out of your way |
 | **Prism** | Media viewer | Open anything — images, video, audio, PDF, 3D models |
-| **Splice** | Media converter | Convert, resize, and process media without leaving your desktop |
+| **Fade** | Media converter | Convert, resize, and process media without leaving your desktop |
 | **Ghost** | Identity-randomizing browser | Leaves no imprint — randomized fingerprint and identity every session, websites can't profile you |
 
 **This repo is standalone.** It is not part of the LibreWin-OS repo. Apps are developed here and integrated into the OS via the ISO build pipeline.
@@ -39,7 +39,7 @@ apps/
   shelf/              File manager (Tauri 2 app)
   stack/              Markdown editor (Tauri 2 app)
   prism/              Media viewer (Tauri 2 app)
-  splice/             Media converter (Tauri 2 app)
+  fade/             Media converter (Tauri 2 app)
   ghost/              Privacy browser (Tauri 2 app)
   Cargo.toml          Rust workspace root
 docs/
@@ -47,7 +47,7 @@ docs/
   shelf/              Shelf specs and milestones
   stack/              Stack specs and milestones
   prism/              Prism specs and milestones
-  splice/             Splice specs and milestones
+  fade/             Fade specs and milestones
   ghost/              Ghost specs and milestones
 CLAUDE.md             This file
 README.md             Public-facing project description
@@ -96,7 +96,7 @@ First build is slow (compiles Tauri + deps). After that, Vite HMR handles fronte
 | Ghost | 1421 |
 | Stack | 1422 |
 | Prism | 1423 |
-| Splice | 1427 |
+| Fade | 1427 |
 
 ---
 
@@ -113,7 +113,7 @@ First build is slow (compiles Tauri + deps). After that, Vite HMR handles fronte
 - **Shelf**: `xattr` (tags), `tauri-plugin-global-shortcut` (Super+E)
 - **Stack**: `pulldown-cmark` (markdown→HTML), `rfd` (file dialogs), CodeMirror 6
 - **Prism**: `pdf.js` (PDF rendering), `three.js` (3D models), custom `mvstream://` protocol
-- **Splice**: FFmpeg + ImageMagick (external CLI tools)
+- **Fade**: FFmpeg + ImageMagick (external CLI tools)
 - **Ghost**: WebKitGTK (via Tauri webview), toolbar injection script
 
 ---
@@ -211,7 +211,7 @@ Each release of this repo publishes these assets for every app:
 | ghost | `ghost` |
 | prism | `librewin-prism` |
 | stack | `librewin-stack` |
-| splice | `splice` |
+| fade | `fade` |
 
 ### Local development:
 ```bash
