@@ -1,29 +1,42 @@
-# Install Manager — CLI Update Tracker
+# Install Manager — Advanced Section Spec
 
-## What it is
+## Purpose
 
-An advanced tab inside Install Manager for users who manage tools via the
-command line. Lets them register check/update command pairs, track update
-status across all their CLI ecosystems in one place, and optionally auto-run
-updates on schedule.
+Install Manager's job is surfacing everything on the system that was installed,
+is running, or needs attention — whether the user explicitly chose it or not.
+The pitch: you don't have to go dig around in the terminal to remember what's
+there. It's all in one place.
 
-Target user: scientists, developers — people already comfortable in the
-terminal, annoyed at juggling `pip`, `conda`, `tlmgr`, `julia Pkg.update()`
-separately with no unified view of what's stale.
+This is distinct from Settings, which is for configuration. Install Manager is
+for things that exist (or don't yet exist) on the system.
 
 ---
 
-## UI
+## Layout
 
-### Advanced tab
+Two zones, no accordion mechanic:
 
-- Collapsed by default. Once the user opens it, it stays open permanently.
-- Badge on the tab (and on the Install Manager dock icon) reflects pending
-  updates across all registered entries.
+**Top zone — no label.** Regular apps. The normal install/uninstall list.
+Nothing special, just clean.
 
-### Entry list
+**Bottom zone — "Advanced" divider.** A visual spacer with the label
+"Advanced" that separates it from the top. Permanently open — never collapses.
+This zone is often the busiest thing on screen for power users, so folding it
+would add friction for no benefit.
 
-Horizontal rows, three columns each:
+The fold-and-stay mechanic belongs in Settings (many categories, most users
+touch one or two). Install Manager has one advanced zone — just show it.
+
+---
+
+## Advanced zone contents
+
+### 1. CLI Update Tracker
+
+For users managing tools via the command line. Register check/update command
+pairs, track update status across all CLI ecosystems in one place.
+
+**Entry list — horizontal rows, three columns:**
 
 | Name | Check command | Update command |
 |------|--------------|----------------|
@@ -33,53 +46,99 @@ Horizontal rows, three columns each:
 
 Each row also has:
 - **Auto-update checkbox** — if checked, Update All runs it automatically.
-  If unchecked, Update All skips it and it must be run manually. Useful for
-  ecosystems that can break things (Julia, TeX Live) vs. safe ones (pip).
+  Per-row control matters: Julia and TeX Live can break things; pip is safe.
 - **Run button** — runs the update command for that row immediately.
-- **Last run timestamp** — shown inline, small, beneath the row.
+- **Last run timestamp** — inline, small.
 
-### Controls
+Controls:
+- **+ button** — adds a new empty row.
+- **Groups** — named (e.g. "Research", "Work"). Badge per group. Drag to organize.
+- **Update All** — runs auto-update rows automatically, prompts for the rest.
 
-- **+ button** — adds a new empty row. User fills in the three columns.
-- **Groups** — rows can be assigned to a named group (e.g. "Research",
-  "System", "Work"). Groups collapse/expand. Badge per group shows how many
-  entries are due. Drag rows into groups. Default group is "General."
-- **Update All button** — runs update commands for all auto-update rows.
-  Prompts before running any unchecked rows.
-
----
-
-## Badge logic
-
-On a configurable schedule (default: daily), Install Manager runs each
-registered check command. If the command produces any output, that entry is
-counted as "has updates." Badge number = count of entries with output.
-
-No output parsing. If it prints anything, something's available. This is
-intentional — matches how CLI users already read these commands.
+Badge logic: run each check command on schedule (daily default). If it prints
+anything, count it as "has updates." No output parsing — matches how CLI users
+already read these commands.
 
 ---
 
-## Auto-update behavior
+### 2. Flatpak Runtimes
 
-Rows with auto-update checked run their update command on schedule without
-prompting. Rows without it only run when the user clicks Run or Update All.
+Flatpak apps silently pull in large runtimes (GNOME Runtime, KDE Frameworks,
+etc.) that accumulate invisibly. Users have no idea they're there.
 
-Suggested defaults:
-- Auto-update off by default on all new entries — user opts in per row.
+Show: runtime name, version, size, which apps depend on it.
+Action: remove unused runtimes with one click.
+
+---
+
+### 3. Firmware
+
+`fwupdmgr` manages firmware for drives, USB controllers, Thunderbolt chips.
+Completely invisible unless you know the command. Security and stability matter.
+
+Show: device name, current firmware version, available update (if any).
+Action: update per-device or update all.
+
+---
+
+### 4. Background Services
+
+Friendly view of systemd services. Things installed silently by packages and
+left running — not malware, just forgotten.
+
+Show: service name, status (running / stopped), enabled at boot (yes/no).
+Action: start/stop, enable/disable. No terminal commands needed.
+
+---
+
+### 5. Startup Items
+
+What launches at login. Windows users expect this to exist somewhere — on Linux
+it's buried. Name, source, enable/disable toggle.
+
+---
+
+### 6. Old Kernels
+
+Fedora keeps 3 kernels by default. Users don't know. Disk space accumulates.
+
+Show: list of installed kernels, which is active, size of each.
+Action: "Remove old kernels" — keeps current + one previous, removes the rest.
+
+---
+
+### 7. Disk Usage by Source
+
+Break down disk usage by category so users can make informed cleanup decisions:
+- Flatpak apps + runtimes
+- DNF package cache
+- Old kernel versions
+- Install Manager CLI tracker cache
+
+One-click cleanup per category.
+
+---
+
+## Badge logic (unified)
+
+The Install Manager dock badge and Advanced section header badge reflects
+the total count of pending items across all advanced subsections:
+- CLI tracker entries with available updates
+- Flatpak runtimes with updates
+- Firmware updates available
+- (Startup items and services don't generate badges — status, not updates)
 
 ---
 
 ## v1 scope
 
-- Add/remove/edit rows
-- Three columns: name, check command, update command
-- Auto-update checkbox per row
-- Groups with names
-- Update All button
-- Badge on tab + dock icon
-- Last run timestamp per row
-- Daily check schedule (fixed, not configurable in v1)
+- CLI Update Tracker: full (rows, groups, auto-update, badge)
+- Flatpak Runtimes: list + remove unused
+- Firmware: list + update
+- Background Services: list + start/stop/enable/disable
+- Startup Items: list + enable/disable
+- Old Kernels: list + remove old
+- Disk Usage: summary view + per-category cleanup
 
-Out of scope for v1: dependency ordering between rows, output log viewer,
-notification per-entry, custom schedule per row.
+Out of scope for v1: CLI tracker output log viewer, custom check schedule
+per row, kernel pinning, per-app Flatpak runtime overrides.
