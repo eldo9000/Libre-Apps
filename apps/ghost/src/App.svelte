@@ -3,6 +3,7 @@
   import { invoke } from '@tauri-apps/api/core';
   import { listen } from '@tauri-apps/api/event';
   import { onMount } from 'svelte';
+  import { initTheme } from '../../common-js/theme.js';
 
   const appWindow = getCurrentWindow();
 
@@ -10,18 +11,7 @@
   let downloadToast = $state(null); // { filename: string } | null
 
   onMount(async () => {
-    const theme = await invoke('get_theme');
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    document.documentElement.classList.toggle('dark',
-      theme === 'dark' || (theme === 'system' && mq.matches));
-    // Read accent from shared ~/.config/librewin/accent and apply to CSS variable.
-    const accent = await invoke('get_accent');
-    document.documentElement.style.setProperty('--accent', accent);
-    const mqHandler = async (e) => {
-      const t = await invoke('get_theme');
-      if (t === 'system') document.documentElement.classList.toggle('dark', e.matches);
-    };
-    mq.addEventListener('change', mqHandler);
+    const themeCleanup = await initTheme(invoke);
 
     const unlistenDownload = listen('download-complete', ({ payload }) => {
       downloadToast = { filename: payload };
@@ -29,7 +19,7 @@
     });
 
     return () => {
-      mq.removeEventListener('change', mqHandler);
+      themeCleanup?.();
       unlistenDownload.then(f => f());
     };
   });

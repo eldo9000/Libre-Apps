@@ -1,8 +1,8 @@
 # Runtime OS packages: none (WebKitGTK bundled via Tauri)
 [Desktop Entry]
 Name=Ghost
-Comment=LibreWin private browser — no trace, ever
-Exec=ghost %U
+Comment=Identity-randomizing browser — new fingerprint every session
+Exec=env WEBKIT_DISABLE_DMABUF_RENDERER=1 ghost %U
 Icon=io.librewin.ghost
 Terminal=false
 Type=Application

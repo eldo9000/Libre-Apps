@@ -139,20 +139,10 @@ fn toggle_maximize(window: tauri::Window) {
 /// Read the LibreWin theme preference from the shared config file.
 /// Returns "dark", "light", or "system" (default when file absent).
 #[tauri::command]
-fn get_theme() -> String {
-    let home = std::env::var("HOME").unwrap_or_default();
-    std::fs::read_to_string(format!("{}/.config/librewin/theme", home))
-        .map(|s| s.trim().to_string())
-        .unwrap_or_else(|_| "system".to_string())
-}
+fn get_theme() -> String { librewin_common::get_theme() }
 
 #[tauri::command]
-fn get_accent() -> String {
-    let home = std::env::var("HOME").unwrap_or_default();
-    std::fs::read_to_string(format!("{}/.config/librewin/accent", home))
-        .map(|s| s.trim().to_string())
-        .unwrap_or_else(|_| "#297acc".to_string())
-}
+fn get_accent() -> String { librewin_common::get_accent() }
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
@@ -173,4 +163,45 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running stack");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn export_html_wraps_in_doctype() {
+        let result = export_html("hello".to_string()).unwrap();
+        assert!(result.contains("<!DOCTYPE html>"));
+        assert!(result.contains("<body>"));
+        assert!(result.contains("</body>"));
+    }
+
+    #[test]
+    fn export_html_renders_heading() {
+        let result = export_html("# Hello World".to_string()).unwrap();
+        assert!(result.contains("<h1>Hello World</h1>"));
+    }
+
+    #[test]
+    fn export_html_renders_paragraph() {
+        let result = export_html("Just a paragraph.".to_string()).unwrap();
+        assert!(result.contains("<p>Just a paragraph.</p>"));
+    }
+
+    #[test]
+    fn export_html_renders_table() {
+        let md = "| A | B |\n|---|---|\n| 1 | 2 |";
+        let result = export_html(md.to_string()).unwrap();
+        assert!(result.contains("<table>"));
+        assert!(result.contains("<th>A</th>") || result.contains(">A<"));
+    }
+
+    #[test]
+    fn export_html_empty_input_produces_valid_document() {
+        let result = export_html(String::new()).unwrap();
+        assert!(result.contains("<!DOCTYPE html>"));
+        assert!(result.contains("<html"));
+        assert!(result.contains("</html>"));
+    }
 }

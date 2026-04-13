@@ -4,7 +4,7 @@
 @import 'tailwindcss';
 
 :root {
-  --accent: #297acc;
+  --accent: #0066cc;
   --accent-hover: #1e5fa6;
   --surface: #ffffff;
   --surface-2: #f7f7f8;

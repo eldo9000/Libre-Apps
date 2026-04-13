@@ -7,7 +7,7 @@ Built with **Tauri 2 + Rust + Svelte 5**. No Electron. No Node runtime. ~3MB per
 ---
 
 ### Shelf — File Manager
-Your filesystem, your way. Tags backed by extended attributes, dual-pane layout, multi-tab, keyboard-driven navigation, instant search. Global Super+E shortcut summons it from anywhere. Built-in archive support (ZIP, 7Z, TAR) and quick media conversion via Fade presets.
+Your filesystem, your way. Tags backed by extended attributes, dual-pane layout, multi-tab, keyboard-driven navigation, instant search. Global Super+E shortcut summons it from anywhere. Archive browsing/extraction (ZIP, 7Z, TAR) coming in v0.2. Quick media conversion via Fade presets.
 
 ### Stack — Markdown Editor
 The note-taking app that gets out of your way. Opens instantly, saves automatically, speaks Markdown natively. CodeMirror 6 editor with live outline, multi-tab, export to HTML/TXT/PDF. The modern Notepad you always wanted.

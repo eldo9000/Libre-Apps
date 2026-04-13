@@ -2,6 +2,7 @@
   import { getCurrentWindow } from '@tauri-apps/api/window';
   import { invoke } from '@tauri-apps/api/core';
   import { onMount } from 'svelte';
+  import { initTheme } from '../../common-js/theme.js';
   import QuickFiles from './lib/QuickFiles.svelte';
 
   const appWindow = getCurrentWindow();
@@ -9,23 +10,7 @@
   let quickFilesRef;
   let dualPane = false;
 
-  onMount(async () => {
-    // Read theme from shared ~/.config/librewin/theme — works across app processes.
-    const theme = await invoke('get_theme');
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    document.documentElement.classList.toggle('dark',
-      theme === 'dark' || (theme === 'system' && mq.matches));
-    // Read accent from shared ~/.config/librewin/accent and apply to CSS variable.
-    const accent = await invoke('get_accent');
-    document.documentElement.style.setProperty('--accent', accent);
-    // Live update: fires when KDE applies a new color scheme (portal → WebKit).
-    const handler = async (e) => {
-      const t = await invoke('get_theme');
-      if (t === 'system') document.documentElement.classList.toggle('dark', e.matches);
-    };
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  });
+  onMount(() => initTheme(invoke));
 </script>
 
 <!-- Frameless window: custom titlebar + file manager -->

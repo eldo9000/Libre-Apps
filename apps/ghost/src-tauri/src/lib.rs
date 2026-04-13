@@ -169,20 +169,10 @@ const TOOLBAR_INIT_SCRIPT: &str = r#"
 /// Read the LibreWin theme preference from the shared config file.
 /// Returns "dark", "light", or "system" (default when file absent).
 #[tauri::command]
-fn get_theme() -> String {
-    let home = std::env::var("HOME").unwrap_or_default();
-    std::fs::read_to_string(format!("{}/.config/librewin/theme", home))
-        .map(|s| s.trim().to_string())
-        .unwrap_or_else(|_| "system".to_string())
-}
+fn get_theme() -> String { librewin_common::get_theme() }
 
 #[tauri::command]
-fn get_accent() -> String {
-    let home = std::env::var("HOME").unwrap_or_default();
-    std::fs::read_to_string(format!("{}/.config/librewin/accent", home))
-        .map(|s| s.trim().to_string())
-        .unwrap_or_else(|_| "#297acc".to_string())
-}
+fn get_accent() -> String { librewin_common::get_accent() }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -248,4 +238,30 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running ghost");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn toolbar_script_blocks_javascript_scheme() {
+        assert!(TOOLBAR_INIT_SCRIPT.contains("/^javascript:/i.test(u)"));
+    }
+
+    #[test]
+    fn toolbar_script_blocks_data_scheme() {
+        assert!(TOOLBAR_INIT_SCRIPT.contains("/^data:/i.test(u)"));
+    }
+
+    #[test]
+    fn toolbar_script_blocks_vbscript_scheme() {
+        assert!(TOOLBAR_INIT_SCRIPT.contains("/^vbscript:/i.test(u)"));
+    }
+
+    #[test]
+    fn toolbar_script_skips_new_tab_page() {
+        // Must not inject toolbar on the Tauri new-tab page
+        assert!(TOOLBAR_INIT_SCRIPT.contains("location.protocol === 'tauri:'"));
+    }
 }

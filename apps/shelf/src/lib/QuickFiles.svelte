@@ -31,7 +31,7 @@
   let homeDir = '';
   let volumes = [];
   let sidebarTab = 'quick';
-  export let dualPane = false;
+  let { dualPane = $bindable(false) } = $props();
   let panes = [makePaneState(), makePaneState()];
   let activePaneIdx = 0;
 
@@ -60,8 +60,8 @@
   let toastTimer = null;
 
   // ── Active pane/tab shorthands ─────────────────────────────────────────────
-  $: ap = panes[activePaneIdx];
-  $: t = ap.tabs[ap.activeTabIdx];
+  let ap = $derived(panes[activePaneIdx]);
+  let t = $derived(ap.tabs[ap.activeTabIdx]);
 
   function updateTab(updates) {
     panes[activePaneIdx].tabs[panes[activePaneIdx].activeTabIdx] = {
@@ -226,7 +226,7 @@
   }
 
   // ── Quick Access ──────────────────────────────────────────────────────────
-  $: quickAccessGroups = [
+  let quickAccessGroups = $derived([
     { group: 'LOCAL', items: [
       { name: 'Home',      path: homeDir,                icon: 'home' },
       { name: 'Desktop',   path: `${homeDir}/Desktop`,   icon: 'desktop' },
@@ -237,7 +237,7 @@
       { name: 'Videos',    path: `${homeDir}/Videos`,    icon: 'video' },
     ]},
     { group: 'DEVICES', items: volumes.map(v => ({ name: v.name, path: v.path, icon: 'drive' })) },
-  ];
+  ]);
 
   // ── Folder tree ───────────────────────────────────────────────────────────
   function expandAncestors(path) {
@@ -273,14 +273,14 @@
     return rows;
   }
 
-  $: treeRows = flattenTree(treeRoots);
+  let treeRows = $derived(flattenTree(treeRoots));
 
   // ── Tags in current dir (active pane) ─────────────────────────────────────
-  $: defaultTagCounts = Object.fromEntries(
+  let defaultTagCounts = $derived(Object.fromEntries(
     DEFAULT_TAGS.map(dt => [dt.name, t.items.filter(i => (i.tags || []).includes(dt.name)).length])
-  );
+  ));
 
-  $: allDirTags = (() => {
+  let allDirTags = $derived((() => {
     const counts = {};
     for (const item of t.items) {
       for (const tag of (item.tags || [])) {
@@ -288,7 +288,7 @@
       }
     }
     return Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([tag, count]) => ({ tag, count }));
-  })();
+  })());
 
   const TAG_COLORS = [
     'bg-blue-500','bg-purple-500','bg-green-500','bg-yellow-500',

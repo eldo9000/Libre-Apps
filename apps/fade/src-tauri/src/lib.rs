@@ -588,20 +588,10 @@ fn run_audio_convert(
 // ── Theme / accent ────────────────────────────────────────────────────────────
 
 #[command]
-fn get_theme() -> String {
-    let home = std::env::var("HOME").unwrap_or_default();
-    std::fs::read_to_string(format!("{}/.config/librewin/theme", home))
-        .map(|s| s.trim().to_string())
-        .unwrap_or_else(|_| "system".to_string())
-}
+fn get_theme() -> String { librewin_common::get_theme() }
 
 #[command]
-fn get_accent() -> String {
-    let home = std::env::var("HOME").unwrap_or_default();
-    std::fs::read_to_string(format!("{}/.config/librewin/accent", home))
-        .map(|s| s.trim().to_string())
-        .unwrap_or_else(|_| "#297acc".to_string())
-}
+fn get_accent() -> String { librewin_common::get_accent() }
 
 // ── Custom presets ────────────────────────────────────────────────────────────
 
@@ -692,26 +682,8 @@ fn delete_preset(id: String) -> Result<(), String> {
     write_presets(&presets)
 }
 
-/// Simple UUID v4 — formatted per RFC 4122, no external deps.
 fn uuid_v4() -> String {
-    use std::sync::atomic::{AtomicU64, Ordering};
-    use std::time::{SystemTime, UNIX_EPOCH};
-    static COUNTER: AtomicU64 = AtomicU64::new(0);
-    let t = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_nanos() as u64)
-        .unwrap_or(0);
-    let c = COUNTER.fetch_add(1, Ordering::Relaxed);
-    let a = t ^ c.wrapping_mul(0x9e3779b97f4a7c15);
-    let b = t.wrapping_mul(0x6c62272e07bb0142).wrapping_add(c);
-    format!(
-        "{:08x}-{:04x}-4{:03x}-{:04x}-{:012x}",
-        (a >> 32) as u32,
-        (a >> 16) as u16,
-        (a & 0xfff) as u16,
-        (0x8000u16 | ((b >> 48) as u16 & 0x3fff)),
-        b & 0x0000_ffff_ffff_ffff,
-    )
+    uuid::Uuid::new_v4().to_string()
 }
 
 // ── Entry point ───────────────────────────────────────────────────────────────
@@ -729,5 +701,92 @@ pub fn run() {
             delete_preset,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .expect("error while running fade");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn build_output_path_with_suffix() {
+        let result = build_output_path("/home/user/video.mp4", "mkv", None, "converted");
+        assert_eq!(result, "/home/user/video_converted.mkv");
+    }
+
+    #[test]
+    fn build_output_path_empty_suffix() {
+        let result = build_output_path("/home/user/video.mp4", "mkv", None, "");
+        assert_eq!(result, "/home/user/video.mkv");
+    }
+
+    #[test]
+    fn build_output_path_custom_output_dir() {
+        let result = build_output_path("/home/user/video.mp4", "mp3", Some("/tmp/out"), "converted");
+        assert_eq!(result, "/tmp/out/video_converted.mp3");
+    }
+
+    #[test]
+    fn validate_suffix_accepts_safe_chars() {
+        assert!(validate_suffix("converted").is_ok());
+        assert!(validate_suffix("my-export_v2").is_ok());
+        assert!(validate_suffix("").is_ok()); // empty is valid — means no suffix
+    }
+
+    #[test]
+    fn validate_suffix_rejects_unsafe_chars() {
+        assert!(validate_suffix("bad/path").is_err());
+        assert!(validate_suffix("has space").is_err());
+        assert!(validate_suffix("dot.dot").is_err());
+        assert!(validate_suffix("semi;colon").is_err());
+    }
+
+    #[test]
+    fn media_type_for_image() {
+        assert_eq!(media_type_for("jpg"), "image");
+        assert_eq!(media_type_for("png"), "image");
+        assert_eq!(media_type_for("webp"), "image");
+        assert_eq!(media_type_for("heic"), "image");
+    }
+
+    #[test]
+    fn media_type_for_video() {
+        assert_eq!(media_type_for("mp4"), "video");
+        assert_eq!(media_type_for("mkv"), "video");
+        assert_eq!(media_type_for("webm"), "video");
+    }
+
+    #[test]
+    fn media_type_for_audio() {
+        assert_eq!(media_type_for("mp3"), "audio");
+        assert_eq!(media_type_for("flac"), "audio");
+        assert_eq!(media_type_for("wav"), "audio");
+    }
+
+    #[test]
+    fn media_type_for_case_insensitive() {
+        assert_eq!(media_type_for("JPG"), "image");
+        assert_eq!(media_type_for("MP4"), "video");
+        assert_eq!(media_type_for("FLAC"), "audio");
+    }
+
+    #[test]
+    fn media_type_for_unknown() {
+        assert_eq!(media_type_for("xyz"), "unknown");
+        assert_eq!(media_type_for(""), "unknown");
+    }
+
+    #[test]
+    fn parse_out_time_ms_parses_microseconds() {
+        assert_eq!(parse_out_time_ms("out_time_ms=1000000"), Some(1.0));
+        assert_eq!(parse_out_time_ms("out_time_ms=500000"), Some(0.5));
+        assert_eq!(parse_out_time_ms("out_time_ms=0"), Some(0.0));
+    }
+
+    #[test]
+    fn parse_out_time_ms_ignores_other_lines() {
+        assert_eq!(parse_out_time_ms("frame=42"), None);
+        assert_eq!(parse_out_time_ms("speed=1.0x"), None);
+        assert_eq!(parse_out_time_ms(""), None);
+    }
 }

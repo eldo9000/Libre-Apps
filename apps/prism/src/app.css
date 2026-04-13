@@ -9,7 +9,7 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  --accent:          #297acc;
+  --accent:          #0066cc;
   --accent-hover:    #1e5fa6;
   --titlebar-bg:     #f7f7f7;
   --surface:         #ffffff;
@@ -20,7 +20,7 @@
 }
 
 html.dark {
-  --accent:          #297acc;
+  --accent:          #0066cc;
   --titlebar-bg:     #1f2937;
   --surface:         #111827;
   --surface-raised:  #1f2937;

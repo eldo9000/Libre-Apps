@@ -257,20 +257,10 @@ fn handle_stream(req: tauri::http::Request<Vec<u8>>) -> tauri::http::Response<Ve
 /// Read the LibreWin theme preference from the shared config file.
 /// Returns "dark", "light", or "system" (default when file absent).
 #[tauri::command]
-fn get_theme() -> String {
-    let home = std::env::var("HOME").unwrap_or_default();
-    std::fs::read_to_string(format!("{}/.config/librewin/theme", home))
-        .map(|s| s.trim().to_string())
-        .unwrap_or_else(|_| "system".to_string())
-}
+fn get_theme() -> String { librewin_common::get_theme() }
 
 #[tauri::command]
-fn get_accent() -> String {
-    let home = std::env::var("HOME").unwrap_or_default();
-    std::fs::read_to_string(format!("{}/.config/librewin/accent", home))
-        .map(|s| s.trim().to_string())
-        .unwrap_or_else(|_| "#297acc".to_string())
-}
+fn get_accent() -> String { librewin_common::get_accent() }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -284,5 +274,90 @@ pub fn run() {
             get_accent,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .expect("error while running prism");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn category_for_ext_image() {
+        assert_eq!(category_for_ext("png"), "image");
+        assert_eq!(category_for_ext("jpg"), "image");
+        assert_eq!(category_for_ext("webp"), "image");
+        assert_eq!(category_for_ext("gif"), "image");
+    }
+
+    #[test]
+    fn category_for_ext_image_convert() {
+        assert_eq!(category_for_ext("heic"), "image_convert");
+        assert_eq!(category_for_ext("tiff"), "image_convert");
+        assert_eq!(category_for_ext("raw"), "image_convert");
+    }
+
+    #[test]
+    fn category_for_ext_video() {
+        assert_eq!(category_for_ext("mp4"), "video");
+        assert_eq!(category_for_ext("mkv"), "video");
+        assert_eq!(category_for_ext("webm"), "video");
+    }
+
+    #[test]
+    fn category_for_ext_audio() {
+        assert_eq!(category_for_ext("mp3"), "audio");
+        assert_eq!(category_for_ext("flac"), "audio");
+        assert_eq!(category_for_ext("ogg"), "audio");
+    }
+
+    #[test]
+    fn category_for_ext_pdf() {
+        assert_eq!(category_for_ext("pdf"), "pdf");
+    }
+
+    #[test]
+    fn category_for_ext_model() {
+        assert_eq!(category_for_ext("obj"), "model");
+        assert_eq!(category_for_ext("gltf"), "model");
+        assert_eq!(category_for_ext("stl"), "model");
+    }
+
+    #[test]
+    fn category_for_ext_unknown() {
+        assert_eq!(category_for_ext("xyz"), "unknown");
+        assert_eq!(category_for_ext(""), "unknown");
+    }
+
+    #[test]
+    fn mime_for_ext_video() {
+        assert_eq!(mime_for_ext("mp4"), "video/mp4");
+        assert_eq!(mime_for_ext("webm"), "video/webm");
+        assert_eq!(mime_for_ext("mkv"), "video/x-matroska");
+    }
+
+    #[test]
+    fn mime_for_ext_audio() {
+        assert_eq!(mime_for_ext("mp3"), "audio/mpeg");
+        assert_eq!(mime_for_ext("flac"), "audio/flac");
+        assert_eq!(mime_for_ext("wav"), "audio/wav");
+    }
+
+    #[test]
+    fn mime_for_ext_image() {
+        assert_eq!(mime_for_ext("png"), "image/png");
+        assert_eq!(mime_for_ext("jpg"), "image/jpeg");
+        assert_eq!(mime_for_ext("webp"), "image/webp");
+    }
+
+    #[test]
+    fn mime_for_ext_pdf() {
+        assert_eq!(mime_for_ext("pdf"), "application/pdf");
+    }
+
+    #[test]
+    fn decode_path_handles_percent_encoding() {
+        assert_eq!(decode_path("/path%20with%20spaces"), "/path with spaces");
+        assert_eq!(decode_path("/normal"), "/normal");
+        assert_eq!(decode_path("/file%2Fname"), "/file/name");
+    }
 }

@@ -3,6 +3,7 @@
   import { invoke } from '@tauri-apps/api/core';
   import { listen } from '@tauri-apps/api/event';
   import { onMount, onDestroy } from 'svelte';
+  import { initTheme } from '../../common-js/theme.js';
   import Queue from './lib/Queue.svelte';
   import ImageOptions from './lib/ImageOptions.svelte';
   import VideoOptions from './lib/VideoOptions.svelte';
@@ -67,18 +68,7 @@
   let unlistenProgress, unlistenDone, unlistenError;
 
   onMount(async () => {
-    // Theme + accent
-    const theme = await invoke('get_theme');
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    document.documentElement.classList.toggle('dark',
-      theme === 'dark' || (theme === 'system' && mq.matches));
-    const accent = await invoke('get_accent');
-    document.documentElement.style.setProperty('--accent', accent);
-    const handler = async (e) => {
-      const t = await invoke('get_theme');
-      if (t === 'system') document.documentElement.classList.toggle('dark', e.matches);
-    };
-    mq.addEventListener('change', handler);
+    const themeCleanup = await initTheme(invoke);
 
     // Tauri events from convert_file background threads
     unlistenProgress = await listen('job-progress', ({ payload }) => {
@@ -113,7 +103,7 @@
       checkAllDone();
     });
 
-    return () => mq.removeEventListener('change', handler);
+    return themeCleanup;
 
     loadPresets();
   });

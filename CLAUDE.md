@@ -123,7 +123,7 @@ First build is slow (compiles Tauri + deps). After that, Vite HMR handles fronte
 All apps share the same visual language. See `Business-OS/ENGINEERING_STANDARDS.md` for the full spec.
 
 - **Light mode default, dark mode supported** — both first-class via CSS variables
-- **Accent:** `#0066cc` via `--accent` CSS variable (user-configurable via `~/.config/librewin/accent`)
+- **Accent:** `#0066cc` via `--accent` CSS variable (user-configurable via `~/.config/librewin/accent`) — `#297acc` was the old erroneous default; all CSS `:root` blocks and Rust `get_accent` fallbacks must use `#0066cc`
 - **Font:** Geist, 14px base, 1.5 line height, antialiased
 - **Spacing:** 4px base unit, compact density (`py-1.5 px-3`)
 - **Window chrome:** Custom titlebar, `decorations: false`, `transparent: true`, 12px border-radius, drop shadow

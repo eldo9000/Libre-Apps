@@ -278,6 +278,12 @@ fn set_tags(path: String, tags: Vec<String>) -> Result<(), String> {
 // ── Quick Convert ─────────────────────────────────────────────────────────────
 
 // ── Fade custom presets ─────────────────────────────────────────────────────
+//
+// COUPLING RISK: This FadePreset struct must stay in sync with the identical
+// struct in apps/fade/src-tauri/src/lib.rs. Both read the same JSON file
+// (~/.config/librewin/fade-presets.json). A field rename or type change in
+// either copy will silently break the other. Once E3 (librewin-common) lands,
+// move this struct there and import it from both apps.
 
 #[derive(Serialize, Deserialize, Clone)]
 struct FadePreset {
@@ -371,15 +377,19 @@ fn run_fade_preset(window: tauri::Window, path: String, preset_id: String) -> Re
         #[derive(serde::Serialize, Clone)]
         struct ConvertFail { input: String, message: String }
 
-        let status = std::process::Command::new(&cmd)
+        let output = std::process::Command::new(&cmd)
             .args(&args)
             .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .status();
+            .stderr(std::process::Stdio::piped())
+            .output();
 
-        match status {
-            Ok(s) if s.success() => { let _ = window.emit("quick-convert-done", ConvertResult { input: path, output: output_path }); }
-            Ok(_) => { let _ = window.emit("quick-convert-error", ConvertFail { input: path, message: format!("{cmd} failed") }); }
+        match output {
+            Ok(out) if out.status.success() => { let _ = window.emit("quick-convert-done", ConvertResult { input: path, output: output_path }); }
+            Ok(out) => {
+                let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
+                let message = if stderr.is_empty() { format!("{cmd} failed") } else { stderr };
+                let _ = window.emit("quick-convert-error", ConvertFail { input: path, message });
+            }
             Err(e) => { let _ = window.emit("quick-convert-error", ConvertFail { input: path, message: format!("{cmd} not found: {e}") }); }
         }
     });
@@ -462,24 +472,23 @@ fn quick_convert(window: tauri::Window, path: String, preset: String) -> Result<
         #[derive(serde::Serialize, Clone)]
         struct ConvertFail { input: String, message: String }
 
-        let status = std::process::Command::new(&cmd)
+        let output = std::process::Command::new(&cmd)
             .args(&full_args)
             .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .status();
+            .stderr(std::process::Stdio::piped())
+            .output();
 
-        match status {
-            Ok(s) if s.success() => {
+        match output {
+            Ok(out) if out.status.success() => {
                 let _ = window.emit("quick-convert-done", ConvertResult {
                     input: path,
                     output: output_path,
                 });
             }
-            Ok(_) => {
-                let _ = window.emit("quick-convert-error", ConvertFail {
-                    input: path,
-                    message: format!("{cmd} conversion failed"),
-                });
+            Ok(out) => {
+                let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
+                let message = if stderr.is_empty() { format!("{cmd} conversion failed") } else { stderr };
+                let _ = window.emit("quick-convert-error", ConvertFail { input: path, message });
             }
             Err(e) => {
                 let _ = window.emit("quick-convert-error", ConvertFail {
@@ -498,20 +507,10 @@ fn quick_convert(window: tauri::Window, path: String, preset: String) -> Result<
 /// Read the LibreWin theme preference from the shared config file.
 /// Returns "dark", "light", or "system" (default when file absent).
 #[tauri::command]
-fn get_theme() -> String {
-    let home = std::env::var("HOME").unwrap_or_default();
-    std::fs::read_to_string(format!("{}/.config/librewin/theme", home))
-        .map(|s| s.trim().to_string())
-        .unwrap_or_else(|_| "system".to_string())
-}
+fn get_theme() -> String { librewin_common::get_theme() }
 
 #[tauri::command]
-fn get_accent() -> String {
-    let home = std::env::var("HOME").unwrap_or_default();
-    std::fs::read_to_string(format!("{}/.config/librewin/accent", home))
-        .map(|s| s.trim().to_string())
-        .unwrap_or_else(|_| "#297acc".to_string())
-}
+fn get_accent() -> String { librewin_common::get_accent() }
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
@@ -555,5 +554,75 @@ pub fn run() {
             get_accent,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .expect("error while running shelf");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn list_dir_returns_entries_sorted_dirs_first() {
+        let base = std::env::temp_dir().join(format!("shelf_test_{}", std::process::id()));
+        fs::create_dir_all(&base).unwrap();
+        fs::write(base.join("aardvark.txt"), "a").unwrap();
+        fs::create_dir_all(base.join("zebra")).unwrap();
+
+        let result = list_dir(base.to_string_lossy().to_string()).unwrap();
+        fs::remove_dir_all(&base).unwrap();
+
+        assert_eq!(result[0].name, "zebra");
+        assert!(result[0].is_dir);
+        assert_eq!(result[1].name, "aardvark.txt");
+        assert!(!result[1].is_dir);
+    }
+
+    #[test]
+    fn list_dir_skips_hidden_files() {
+        let base = std::env::temp_dir().join(format!("shelf_hidden_{}", std::process::id()));
+        fs::create_dir_all(&base).unwrap();
+        fs::write(base.join("visible.txt"), "v").unwrap();
+        fs::write(base.join(".hidden"), "h").unwrap();
+
+        let result = list_dir(base.to_string_lossy().to_string()).unwrap();
+        fs::remove_dir_all(&base).unwrap();
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].name, "visible.txt");
+    }
+
+    #[test]
+    fn list_dir_errors_on_missing_path() {
+        let result = list_dir("/nonexistent/shelf/test/path".to_string());
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("does not exist"));
+    }
+
+    #[test]
+    fn list_dir_errors_on_file_not_dir() {
+        let p = std::env::temp_dir().join(format!("shelf_file_{}.txt", std::process::id()));
+        fs::write(&p, "content").unwrap();
+        let result = list_dir(p.to_string_lossy().to_string());
+        fs::remove_file(&p).unwrap();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Not a directory"));
+    }
+
+    #[test]
+    fn tags_roundtrip() {
+        let p = std::env::temp_dir().join(format!("shelf_tags_{}.txt", std::process::id()));
+        fs::write(&p, "tag test").unwrap();
+        let path = p.to_string_lossy().to_string();
+
+        set_tags(path.clone(), vec!["work".to_string(), "urgent".to_string()]).unwrap();
+        let tags = get_tags(path.clone());
+
+        set_tags(path.clone(), vec![]).unwrap();
+        let empty = get_tags(path.clone());
+        fs::remove_file(&p).unwrap();
+
+        assert_eq!(tags, vec!["work", "urgent"]);
+        assert!(empty.is_empty());
+    }
 }
