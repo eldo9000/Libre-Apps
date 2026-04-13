@@ -33,6 +33,9 @@ apps/*/bin/
 .vscode/
 .idea/
 
+# Claude Code
+.claude/
+
 # Temporary
 *.tmp
 *.temp
