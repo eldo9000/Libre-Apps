@@ -40,3 +40,5 @@ apps/*/bin/
 *.tmp
 *.temp
 /tmp/
+# Lockfiles
+apps/Cargo.lock
