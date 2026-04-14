@@ -172,7 +172,7 @@
 
     {#if loadState === 'loading'}
       <div class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#1a1a2e]">
-        <div class="w-8 h-8 rounded-full border-2 border-gray-700 border-t-[#0066cc] animate-spin"></div>
+        <div class="w-8 h-8 rounded-full border-2 border-gray-700 border-t-[var(--accent)] animate-spin"></div>
         <span class="text-gray-400 text-sm">Loading 3D model…</span>
       </div>
     {:else if loadState === 'error'}
@@ -207,7 +207,7 @@
 
       <button
         onclick={toggleWireframe}
-        class="flex items-center gap-1.5 px-2.5 h-6 rounded transition-colors text-xs border {wireframe ? 'bg-[#0066cc] text-white border-[#0066cc]' : 'text-gray-300 hover:bg-gray-700 hover:text-white border-gray-600'}"
+        class="flex items-center gap-1.5 px-2.5 h-6 rounded transition-colors text-xs border {wireframe ? 'bg-[var(--accent)] text-white border-[var(--accent)]' : 'text-gray-300 hover:bg-gray-700 hover:text-white border-gray-600'}"
         title="Toggle wireframe"
       >
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

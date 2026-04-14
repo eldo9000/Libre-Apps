@@ -163,7 +163,7 @@
       >Reset</button>
 
       {#if rendering}
-        <div class="ml-2 w-4 h-4 rounded-full border-2 border-gray-600 border-t-[#0066cc] animate-spin"></div>
+        <div class="ml-2 w-4 h-4 rounded-full border-2 border-gray-600 border-t-[var(--accent)] animate-spin"></div>
       {/if}
     </div>
   {/if}
@@ -172,7 +172,7 @@
   <div class="flex-1 min-h-0 overflow-auto flex justify-center p-6 bg-gray-700">
     {#if loadState === 'loading'}
       <div class="flex flex-col items-center justify-center gap-3 self-center">
-        <div class="w-8 h-8 rounded-full border-2 border-gray-600 border-t-[#0066cc] animate-spin"></div>
+        <div class="w-8 h-8 rounded-full border-2 border-gray-600 border-t-[var(--accent)] animate-spin"></div>
         <span class="text-gray-400 text-sm">Loading PDF…</span>
       </div>
     {:else if loadState === 'error'}

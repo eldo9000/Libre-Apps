@@ -98,7 +98,7 @@
 
     <!-- Audio icon -->
     <div class="w-24 h-24 rounded-2xl bg-gray-800 flex items-center justify-center border border-gray-700">
-      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-[#0066cc]">
+      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-[var(--accent)]">
         <path d="M9 18V5l12-2v13"/>
         <circle cx="6" cy="18" r="3"/>
         <circle cx="18" cy="16" r="3"/>
@@ -126,7 +126,7 @@
         aria-label="Seek"
       >
         <div
-          class="h-full bg-[#0066cc] rounded-full pointer-events-none"
+          class="h-full bg-[var(--accent)] rounded-full pointer-events-none"
           style="width: {progressPct}%"
         ></div>
         <div
@@ -143,7 +143,7 @@
     <!-- Play/Pause button -->
     <button
       onclick={togglePlay}
-      class="w-16 h-16 rounded-full bg-[#0066cc] hover:bg-blue-500 flex items-center justify-center transition-colors shadow-lg shadow-blue-900/30"
+      class="w-16 h-16 rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] flex items-center justify-center transition-colors shadow-lg shadow-blue-900/30"
       title="Play/Pause (Space)"
     >
       {#if playing}
@@ -169,7 +169,7 @@
         step="0.01"
         value={volume}
         oninput={handleVolumeInput}
-        class="flex-1 h-1.5 accent-[#0066cc] cursor-pointer"
+        class="flex-1 h-1.5 accent-[var(--accent)] cursor-pointer"
         aria-label="Volume"
       />
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="text-gray-500 shrink-0">

@@ -41,7 +41,7 @@
     <!-- Loading state -->
     <div class="flex-1 flex items-center justify-center">
       <div class="flex flex-col items-center gap-3">
-        <div class="w-8 h-8 rounded-full border-2 border-gray-200 dark:border-gray-700 border-t-[#0066cc] animate-spin"></div>
+        <div class="w-8 h-8 rounded-full border-2 border-gray-200 dark:border-gray-700 border-t-[var(--accent)] animate-spin"></div>
         <span class="text-gray-500 dark:text-gray-400 text-sm">Loading…</span>
       </div>
     </div>

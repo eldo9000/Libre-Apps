@@ -2,67 +2,52 @@
 @import '@fontsource/geist/500.css';
 @import '@fontsource/geist/600.css';
 @import 'tailwindcss';
+@import '@libre/ui/src/tokens.css';
 
+/* ── Stack extended tokens — editor-grade surface hierarchy ────────────────── */
 :root {
-  --accent: #0066cc;
-  --accent-hover: #1e5fa6;
-  --surface: #ffffff;
-  --surface-2: #f7f7f8;
-  --surface-3: #eff0f1;
-  --border: #e2e4e8;
-  --text: #111827;
-  --text-2: #6b7280;
-  --text-3: #9ca3af;
-  --titlebar-bg: #f8fafc;
+  --surface-2:       #f7f7f8;
+  --surface-3:       #eff0f1;
+  --border:          #e2e4e8;
+  --text:            #111827;    /* alias: --text-primary */
+  --text-2:          #6b7280;    /* alias: --text-secondary */
+  --text-3:          #9ca3af;
+  --titlebar-bg:     #f8fafc;
   --titlebar-border: #e2e4e8;
-  --panel-bg: #f7f7f8;
-  --panel-border: #e2e4e8;
-  --tab-active: #ffffff;
-  --tab-inactive: #f0f1f3;
-  --cm-bg: #ffffff;
-  --cm-gutter: #f7f7f8;
+  --panel-bg:        #f7f7f8;
+  --panel-border:    #e2e4e8;
+  --tab-active:      #ffffff;
+  --tab-inactive:    #f0f1f3;
+  --cm-bg:           #ffffff;
+  --cm-gutter:       #f7f7f8;
 }
 
 html.dark {
-  --surface: #1a1d23;
-  --surface-2: #13161b;
-  --surface-3: #0f1114;
-  --border: #2d3039;
-  --text: #e5e7eb;
-  --text-2: #9ca3af;
-  --text-3: #6b7280;
-  --titlebar-bg: #13161b;
+  --surface:         #1a1d23;
+  --surface-2:       #13161b;
+  --surface-3:       #0f1114;
+  --border:          #2d3039;
+  --text:            #e5e7eb;
+  --text-2:          #9ca3af;
+  --text-3:          #6b7280;
+  --titlebar-bg:     #13161b;
   --titlebar-border: #2d3039;
-  --panel-bg: #13161b;
-  --panel-border: #2d3039;
-  --tab-active: #1a1d23;
-  --tab-inactive: #0f1114;
-  --cm-bg: #1a1d23;
-  --cm-gutter: #13161b;
+  --panel-bg:        #13161b;
+  --panel-border:    #2d3039;
+  --tab-active:      #1a1d23;
+  --tab-inactive:    #0f1114;
+  --cm-bg:           #1a1d23;
+  --cm-gutter:       #13161b;
 }
 
-* {
-  box-sizing: border-box;
-}
-
+/* ── Base ──────────────────────────────────────────────────────────────────── */
 html, body, #app {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
   font-family: 'Geist', system-ui, sans-serif;
   background: var(--surface);
   color: var(--text);
 }
 
-/* Accessibility: visible focus ring for keyboard navigation */
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-  border-radius: 2px;
-}
-
-/* CodeMirror overrides — match design tokens */
+/* ── CodeMirror ────────────────────────────────────────────────────────────── */
 .cm-editor {
   height: 100%;
   font-size: 14px;
@@ -121,13 +106,11 @@ html, body, #app {
 .ͼc { color: var(--accent) !important; font-weight: 600; }   /* h2 */
 .ͼd { color: var(--accent) !important; }                      /* h3 */
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+/* ── Scrollbar (token-aware override) ──────────────────────────────────────── */
+::-webkit-scrollbar-thumb { background: var(--border); }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
 
-/* Resize handle */
+/* ── Resize handle ─────────────────────────────────────────────────────────── */
 .resize-handle {
   width: 4px;
   cursor: col-resize;
@@ -139,35 +122,11 @@ html, body, #app {
   background: var(--accent);
 }
 
-/* Unsaved dot */
+/* ── Unsaved dot ───────────────────────────────────────────────────────────── */
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
 .unsaved-dot {
   animation: pulse-dot 2s ease-in-out infinite;
-}
-
-
-/* ── Rounded window corners (M7 polish) ─────────────────────────────────────
-   transparent: true in tauri.conf.json makes the window surface transparent.
-   #app gets padding to create space for the drop shadow.
-   #app > div (main wrapper) gets border-radius + shadow.
-   X11 without compositing: corners appear opaque; acceptable known limitation.
-─────────────────────────────────────────────────────────────────────────── */
-html, body {
-  background: transparent;
-}
-
-#app {
-  padding: 8px;
-  box-sizing: border-box;
-  overflow: visible;
-  background: transparent;
-}
-
-#app > div:first-child {
-  border-radius: 10px !important;
-  overflow: hidden;
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.24);
 }

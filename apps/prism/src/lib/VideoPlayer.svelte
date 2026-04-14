@@ -176,7 +176,7 @@
   {#if !loaded}
     <div class="absolute inset-0 flex items-center justify-center bg-black">
       <div class="flex flex-col items-center gap-3">
-        <div class="w-8 h-8 rounded-full border-2 border-gray-700 border-t-[#0066cc] animate-spin"></div>
+        <div class="w-8 h-8 rounded-full border-2 border-gray-700 border-t-[var(--accent)] animate-spin"></div>
         <span class="text-gray-400 text-sm">Loading video…</span>
       </div>
     </div>
@@ -205,7 +205,7 @@
           aria-label="Seek"
         >
           <div
-            class="h-full bg-[#0066cc] rounded-full pointer-events-none"
+            class="h-full bg-[var(--accent)] rounded-full pointer-events-none"
             style="width: {progressPct}%"
           ></div>
           <div
@@ -318,7 +318,7 @@
               {#each SPEEDS as s}
                 <button
                   onclick={() => setSpeed(s)}
-                  class="w-full px-4 py-1.5 text-left text-sm hover:bg-gray-700 transition-colors {s === playbackRate ? 'text-[#0066cc]' : 'text-gray-200'}"
+                  class="w-full px-4 py-1.5 text-left text-sm hover:bg-gray-700 transition-colors {s === playbackRate ? 'text-[var(--accent)]' : 'text-gray-200'}"
                 >{s}×</button>
               {/each}
             </div>
