@@ -1,27 +1,18 @@
 <script>
-  import { getCurrentWindow } from '@tauri-apps/api/window';
   import { invoke } from '@tauri-apps/api/core';
   import { listen } from '@tauri-apps/api/event';
   import { onMount } from 'svelte';
-  import { initTheme } from '@libre/ui/src/theme.js';
-
-  const appWindow = getCurrentWindow();
+  import { WindowFrame, Titlebar } from '@libre/ui';
 
   let urlInput = $state('');
   let downloadToast = $state(null); // { filename: string } | null
 
   onMount(async () => {
-    const themeCleanup = await initTheme(invoke);
-
     const unlistenDownload = listen('download-complete', ({ payload }) => {
       downloadToast = { filename: payload };
       setTimeout(() => { downloadToast = null; }, 4000);
     });
-
-    return () => {
-      themeCleanup?.();
-      unlistenDownload.then(f => f());
-    };
+    return () => { unlistenDownload.then(f => f()); };
   });
 
   function navigate() {
@@ -72,24 +63,11 @@
   ];
 </script>
 
-<div class="relative flex flex-col h-full bg-[var(--surface)] overflow-hidden">
-
-  <!-- Top resize strip — invisible 4px hit-target so dragging the very top edge resizes -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div
-    class="absolute top-[8px] left-0 right-0 h-[4px] z-50 cursor-n-resize"
-    onmousedown={(e) => { e.preventDefault(); appWindow.startResizeDragging('North'); }}
-  ></div>
-
-  <!-- Titlebar — Windows style: Ghost icon+name LEFT, nav+address bar CENTER, controls RIGHT -->
-  <div
-    data-tauri-drag-region
-    class="h-11 bg-[var(--titlebar-bg)] border-b border-[var(--border)]
-           flex items-center shrink-0 select-none pr-0"
-  >
-    <!-- Left: Ghost icon + name (draggable) -->
+<WindowFrame>
+  <!-- Titlebar: Ghost icon + name LEFT, nav + address bar CENTER, controls RIGHT -->
+  <Titlebar height="h-11">
+    <!-- Left: Ghost icon + name -->
     <div class="flex items-center gap-2 shrink-0 pl-3 mr-2" data-tauri-drag-region>
-      <!-- Ghost icon -->
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
            stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
            class="text-[var(--accent)] shrink-0">
@@ -102,30 +80,25 @@
 
     <!-- Nav controls + address bar + Go -->
     <div class="flex items-center gap-1 flex-1 min-w-0 pr-1" role="navigation" aria-label="Browser navigation">
-      <!-- Back / Forward / Reload -->
       <button
         onclick={() => history.back()}
         class="p-1 rounded text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300
                hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-base leading-none shrink-0"
-        title="Back"
-        aria-label="Back"
+        title="Back" aria-label="Back"
       >‹</button>
       <button
         onclick={() => history.forward()}
         class="p-1 rounded text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300
                hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-base leading-none shrink-0"
-        title="Forward"
-        aria-label="Forward"
+        title="Forward" aria-label="Forward"
       >›</button>
       <button
         onclick={() => window.location.reload()}
         class="p-1 rounded text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300
                hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm leading-none shrink-0"
-        title="Reload"
-        aria-label="Reload"
+        title="Reload" aria-label="Reload"
       >↺</button>
 
-      <!-- Address bar -->
       <input
         bind:value={urlInput}
         onkeydown={onKeydown}
@@ -138,42 +111,16 @@
                placeholder-gray-400 dark:placeholder-gray-500 transition-all min-w-0 mx-1"
       />
 
-      <!-- Go -->
       <button
         onclick={navigate}
         class="shrink-0 px-3 h-7 bg-[var(--accent)] hover:opacity-90 text-white text-xs font-medium
                rounded-full transition-opacity"
       >Go</button>
     </div>
-
-    <!-- Right: Windows-style window controls -->
-    <div class="flex items-center shrink-0 h-full">
-      <button
-        onclick={() => appWindow.minimize()}
-        class="w-11 h-full flex items-center justify-center text-gray-500 dark:text-gray-400
-               hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-[16px] leading-none"
-        title="Minimize"
-        aria-label="Minimize"
-      >─</button>
-      <button
-        onclick={() => appWindow.toggleMaximize()}
-        class="w-11 h-full flex items-center justify-center text-gray-500 dark:text-gray-400
-               hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-[13px]"
-        title="Maximize"
-        aria-label="Maximize"
-      >□</button>
-      <button
-        onclick={() => appWindow.close()}
-        class="w-11 h-full flex items-center justify-center text-gray-500 dark:text-gray-400
-               hover:bg-red-500 hover:text-white transition-colors text-[18px]"
-        title="Close"
-        aria-label="Close"
-      >×</button>
-    </div>
-  </div>
+  </Titlebar>
 
   <!-- New tab page -->
-  <div class="flex-1 flex flex-col items-center justify-center gap-7 bg-[var(--surface)] overflow-auto py-8" role="main">
+  <div class="flex-1 flex flex-col items-center justify-center gap-7 overflow-auto py-8" role="main">
 
     <!-- Header -->
     <div class="flex items-center gap-3">
@@ -274,12 +221,11 @@
     </div>
   </div>
 
-  <!-- Download toast — bottom-right, slides in when a download completes -->
+  <!-- Download toast -->
   {#if downloadToast}
     <div class="absolute bottom-4 right-4 z-50 flex items-center gap-3 px-4 py-3
                 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700
                 rounded-xl shadow-lg text-sm max-w-xs animate-fade-in">
-      <!-- Download icon -->
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
            stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
            class="text-[var(--accent)] shrink-0">
@@ -293,4 +239,4 @@
     </div>
   {/if}
 
-</div>
+</WindowFrame>
