@@ -78,7 +78,8 @@
 
     // Scene
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1a1a2e);
+    const bgColor = getComputedStyle(document.documentElement).getPropertyValue('--surface').trim() || '#111827';
+    scene.background = new THREE.Color(bgColor);
 
     // Camera
     camera = new THREE.PerspectiveCamera(60, w / h, 0.01, 1000);
@@ -165,18 +166,18 @@
   });
 </script>
 
-<div class="flex flex-col h-full bg-[#1a1a2e]">
+<div class="flex flex-col h-full bg-[var(--surface)]">
   <!-- 3D canvas area -->
   <div class="flex-1 min-h-0 relative">
     <canvas bind:this={canvasEl} class="w-full h-full block"></canvas>
 
     {#if loadState === 'loading'}
-      <div class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#1a1a2e]">
+      <div class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[var(--surface)]">
         <div class="w-8 h-8 rounded-full border-2 border-gray-700 border-t-[var(--accent)] animate-spin"></div>
         <span class="text-gray-400 text-sm">Loading 3D model…</span>
       </div>
     {:else if loadState === 'error'}
-      <div class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center bg-[#1a1a2e] px-8">
+      <div class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center bg-[var(--surface)] px-8">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor" class="text-red-400">
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
         </svg>
