@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@codemirror/lang-markdown": "^6.3.2",
+    "@libre/ui": "*",
     "@codemirror/language": "^6.11.0",
     "@codemirror/search": "^6.5.9",
     "@codemirror/state": "^6.5.2",

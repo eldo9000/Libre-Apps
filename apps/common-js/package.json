@@ -1,0 +1,11 @@
+{
+  "name": "@libre/ui",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    "./src/*": "./src/*"
+  },
+  "files": [
+    "src"
+  ]
+}

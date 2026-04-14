@@ -3,7 +3,7 @@
   import { invoke } from '@tauri-apps/api/core';
   import { listen } from '@tauri-apps/api/event';
   import { onMount, onDestroy } from 'svelte';
-  import { initTheme } from '../../common-js/theme.js';
+  import { initTheme } from '@libre/ui/src/theme.js';
   import Queue from './lib/Queue.svelte';
   import ImageOptions from './lib/ImageOptions.svelte';
   import VideoOptions from './lib/VideoOptions.svelte';

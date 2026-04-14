@@ -2,7 +2,7 @@
   import { getCurrentWindow } from '@tauri-apps/api/window';
   import { invoke } from '@tauri-apps/api/core';
   import { onMount } from 'svelte';
-  import { initTheme } from '../../common-js/theme.js';
+  import { initTheme } from '@libre/ui/src/theme.js';
   import MediaViewer from './lib/MediaViewer.svelte';
 
   const appWindow = getCurrentWindow();

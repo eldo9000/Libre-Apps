@@ -3,7 +3,7 @@
   import { invoke } from '@tauri-apps/api/core';
   import { listen } from '@tauri-apps/api/event';
   import { onMount } from 'svelte';
-  import { initTheme } from '../../common-js/theme.js';
+  import { initTheme } from '@libre/ui/src/theme.js';
 
   const appWindow = getCurrentWindow();
 

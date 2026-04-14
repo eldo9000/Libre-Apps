@@ -1,0 +1,7 @@
+{
+  "name": "libre-apps",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ]
+}
