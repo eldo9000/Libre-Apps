@@ -1,3 +1,5 @@
+use librewin_common::config::{read_presets, FadePreset};
+use librewin_common::xattr as lx;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
@@ -34,17 +36,7 @@ pub struct WineStatus {
 
 /// Read user.tags xattr from a path; returns empty vec if not set or error.
 fn read_tags_for(path: &str) -> Vec<String> {
-    xattr::get(path, "user.tags")
-        .ok()
-        .flatten()
-        .and_then(|v| String::from_utf8(v).ok())
-        .map(|s| {
-            s.split(',')
-                .map(|t| t.trim().to_string())
-                .filter(|t| !t.is_empty())
-                .collect()
-        })
-        .unwrap_or_default()
+    lx::read_tags(path)
 }
 
 // ── Commands ─────────────────────────────────────────────────────────────────
@@ -256,58 +248,14 @@ fn get_tags(path: String) -> Vec<String> {
 /// Pass an empty vec to remove all tags.
 #[command]
 fn set_tags(path: String, tags: Vec<String>) -> Result<(), String> {
-    let value: String = tags.iter()
-        .map(|t| t.trim())
-        .filter(|t| !t.is_empty())
-        .collect::<Vec<_>>()
-        .join(",");
-
-    if value.is_empty() {
-        match xattr::remove(&path, "user.tags") {
-            Ok(_) => {}
-            Err(e) if e.raw_os_error() == Some(61) => {} // ENODATA — already gone
-            Err(e) => return Err(e.to_string()),
-        }
-    } else {
-        xattr::set(&path, "user.tags", value.as_bytes())
-            .map_err(|e| e.to_string())?;
-    }
-    Ok(())
+    lx::write_tags(&path, &tags)
 }
 
 // ── Quick Convert ─────────────────────────────────────────────────────────────
 
-// ── Fade custom presets ─────────────────────────────────────────────────────
-//
-// COUPLING RISK: This FadePreset struct must stay in sync with the identical
-// struct in apps/fade/src-tauri/src/lib.rs. Both read the same JSON file
-// (~/.config/librewin/fade-presets.json). A field rename or type change in
-// either copy will silently break the other. Once E3 (librewin-common) lands,
-// move this struct there and import it from both apps.
-
-#[derive(Serialize, Deserialize, Clone)]
-struct FadePreset {
-    id: String,
-    name: String,
-    media_type: String,
-    output_format: String,
-    quality: Option<u32>,
-    codec: Option<String>,
-    bitrate: Option<u32>,
-    sample_rate: Option<u32>,
-}
-
-fn fade_presets_path() -> String {
-    let home = std::env::var("HOME").unwrap_or_default();
-    format!("{}/.config/librewin/fade-presets.json", home)
-}
-
 #[command]
 fn list_fade_presets() -> Vec<FadePreset> {
-    std::fs::read_to_string(fade_presets_path())
-        .ok()
-        .and_then(|s| serde_json::from_str(&s).ok())
-        .unwrap_or_default()
+    read_presets()
 }
 
 /// Run a custom Fade preset — fire-and-forget, emits "quick-convert-done" or "quick-convert-error".
@@ -318,10 +266,7 @@ fn run_fade_preset(window: tauri::Window, path: String, preset_id: String) -> Re
         return Err(format!("File not found: {path}"));
     }
 
-    let presets: Vec<FadePreset> = std::fs::read_to_string(fade_presets_path())
-        .ok()
-        .and_then(|s| serde_json::from_str(&s).ok())
-        .unwrap_or_default();
+    let presets = read_presets();
 
     let preset = presets.into_iter().find(|pr| pr.id == preset_id)
         .ok_or_else(|| format!("Preset not found: {preset_id}"))?;

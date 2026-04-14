@@ -5,3 +5,13 @@ description = "Shared utilities for LibreWin Freedom Apps"
 authors = ["LibreWin"]
 edition = "2021"
 rust-version = "1.77"
+
+[dependencies]
+serde      = { workspace = true }
+serde_json = { workspace = true }
+xattr      = { version = "1", optional = true }
+
+[features]
+default = []
+# Enable xattr-based file tagging (get_tags / set_tags)
+tags = ["dep:xattr"]

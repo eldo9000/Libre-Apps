@@ -1,3 +1,4 @@
+use librewin_common::config::{read_presets, write_presets, FadePreset};
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader};
 use std::path::Path;
@@ -594,41 +595,6 @@ fn get_theme() -> String { librewin_common::get_theme() }
 fn get_accent() -> String { librewin_common::get_accent() }
 
 // ── Custom presets ────────────────────────────────────────────────────────────
-
-#[derive(Serialize, Deserialize, Clone)]
-pub struct FadePreset {
-    pub id: String,
-    pub name: String,
-    pub media_type: String,     // "image" | "video" | "audio"
-    pub output_format: String,
-    pub quality: Option<u32>,   // image quality 1-100
-    pub codec: Option<String>,  // video codec: "h264" | "h265" | "vp9" | "av1" | "copy"
-    pub bitrate: Option<u32>,   // audio/video bitrate kbps
-    pub sample_rate: Option<u32>, // audio sample rate Hz
-}
-
-fn presets_path() -> String {
-    let home = std::env::var("HOME").unwrap_or_default();
-    format!("{}/.config/librewin/fade-presets.json", home)
-}
-
-fn read_presets() -> Vec<FadePreset> {
-    let path = presets_path();
-    std::fs::read_to_string(&path)
-        .ok()
-        .and_then(|s| serde_json::from_str(&s).ok())
-        .unwrap_or_default()
-}
-
-fn write_presets(presets: &[FadePreset]) -> Result<(), String> {
-    let path = presets_path();
-    // Ensure directory exists
-    if let Some(dir) = std::path::Path::new(&path).parent() {
-        std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
-    }
-    let json = serde_json::to_string_pretty(presets).map_err(|e| e.to_string())?;
-    std::fs::write(&path, json).map_err(|e| e.to_string())
-}
 
 #[command]
 fn list_presets() -> Vec<FadePreset> {

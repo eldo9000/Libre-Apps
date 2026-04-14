@@ -1,3 +1,8 @@
+pub mod config;
+pub mod os;
+#[cfg(feature = "tags")]
+pub mod xattr;
+
 /// Read the LibreWin theme preference from the shared config file.
 /// Returns "dark", "light", or "system" (default when file absent).
 pub fn get_theme() -> String {

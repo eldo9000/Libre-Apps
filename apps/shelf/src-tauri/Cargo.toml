@@ -18,6 +18,5 @@ tauri                     = { workspace = true }
 tauri-plugin-global-shortcut = "2"
 serde                     = { workspace = true }
 serde_json                = { workspace = true }
-librewin-common           = { workspace = true }
-xattr = "1"
+librewin-common           = { workspace = true, features = ["tags"] }
 
