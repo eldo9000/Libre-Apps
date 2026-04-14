@@ -17,7 +17,12 @@
    *   </Titlebar>
    */
 
-  let { height = 'h-8', children } = $props();
+  /**
+   * onclose — optional custom close handler. If provided, called instead of
+   *   appWindow.close(). Use this when the app needs to confirm unsaved state
+   *   (e.g. Stack checks for unsaved tabs) before closing the window.
+   */
+  let { height = 'h-8', onclose, children } = $props();
 
   const appWindow = getCurrentWindow();
 </script>
@@ -57,7 +62,7 @@
       aria-label="Maximize"
     >□</button>
     <button
-      onclick={() => appWindow.close()}
+      onclick={() => onclose ? onclose() : appWindow.close()}
       class="w-11 h-full flex items-center justify-center text-gray-500 dark:text-gray-400
              hover:bg-red-500 hover:text-white transition-colors text-[18px]"
       title="Close"

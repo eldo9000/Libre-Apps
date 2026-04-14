@@ -2,6 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
   import { getCurrentWindow } from '@tauri-apps/api/window';
+  import { WindowFrame, Titlebar } from '@libre/ui';
   import { EditorView, keymap, lineNumbers, drawSelection, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view';
   import { EditorState, Compartment } from '@codemirror/state';
   import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
@@ -309,11 +310,7 @@
   }
 
   // ── Window chrome ──────────────────────────────────────────────────────────
-  async function minimize() { await appWindow.minimize(); }
-  async function toggleMax() {
-    const maximized = await appWindow.isMaximized();
-    maximized ? await appWindow.unmaximize() : await appWindow.maximize();
-  }
+  // minimize / toggleMax handled by <Titlebar> — only custom close is needed here.
   async function closeWindow() {
     const unsaved = tabs.filter(t => !t.saved);
     if (unsaved.length > 0) {
@@ -325,15 +322,13 @@
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
   onMount(async () => {
-    // Read OS theme from shared file.
+    // theme + accent CSS vars are handled by WindowFrame via initTheme.
+    // We still need isDark state here to drive CodeMirror's theme compartment.
     const theme = await invoke('get_theme');
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     isDark = theme === 'dark' || (theme === 'system' && mq.matches);
-    // Read accent from shared ~/.config/librewin/accent and apply to CSS variable.
-    const accent = await invoke('get_accent');
-    document.documentElement.style.setProperty('--accent', accent);
 
-    // Live update: KDE color scheme change fires matchMedia event.
+    // Live update: keep isDark in sync for CodeMirror when OS scheme changes.
     const mqHandler = async (e) => {
       const t = await invoke('get_theme');
       if (t === 'system') isDark = e.matches;
@@ -409,32 +404,24 @@
 <svelte:window on:keydown={handleKeydown} />
 
 <!-- Root layout -->
-<div class="flex flex-col h-full" style="background: var(--surface); color: var(--text);">
+<WindowFrame style="color: var(--text);">
 
   <!-- ── Titlebar ──────────────────────────────────────────────────────────── -->
-  <div
-    class="flex items-center gap-0 select-none shrink-0"
-    style="
-      height: 44px;
-      background: var(--titlebar-bg);
-      border-bottom: 1px solid var(--titlebar-border);
-      -webkit-app-region: drag;
-    "
-  >
+  <Titlebar height="h-11" onclose={closeWindow}>
     <!-- Brand -->
-    <div class="flex items-center gap-2 px-3 shrink-0" style="-webkit-app-region: drag;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="-webkit-app-region: drag; flex-shrink: 0">
+    <div class="flex items-center gap-2 px-3 shrink-0">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
         <polyline points="14 2 14 8 20 8"/>
         <line x1="16" y1="13" x2="8" y2="13"/>
         <line x1="16" y1="17" x2="8" y2="17"/>
         <line x1="10" y1="9" x2="8" y2="9"/>
       </svg>
-      <span class="text-sm font-medium" style="color: var(--text); -webkit-app-region: drag;">Stack</span>
+      <span class="text-sm font-medium" style="color: var(--text);">Stack</span>
     </div>
 
     <!-- Tab bar -->
-    <div class="flex items-end gap-px flex-1 overflow-x-auto overflow-y-hidden px-1 min-w-0" style="-webkit-app-region: no-drag; height: 100%; padding-top: 6px;">
+    <div class="flex items-end gap-px flex-1 overflow-x-auto overflow-y-hidden px-1 min-w-0" style="height: 100%; padding-top: 6px;">
       {#each tabs as tab (tab.id)}
         <button
           onclick={() => switchTab(tab.id)}
@@ -475,7 +462,7 @@
     </div>
 
     <!-- Menu actions -->
-    <div class="flex items-center gap-0.5 px-2 shrink-0" style="-webkit-app-region: no-drag;">
+    <div class="flex items-center gap-0.5 px-2 shrink-0">
       <button onclick={openFile} class="titlebar-btn" title="Open (Ctrl+O)" aria-label="Open file">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
@@ -536,13 +523,7 @@
       </button>
     </div>
 
-    <!-- Window controls -->
-    <div class="flex items-center shrink-0" style="-webkit-app-region: no-drag; height: 100%;">
-      <button onclick={minimize} class="wc-btn" title="Minimize" aria-label="Minimize">─</button>
-      <button onclick={toggleMax} class="wc-btn" title="Maximize" aria-label="Maximize">□</button>
-      <button onclick={closeWindow} class="wc-btn wc-close" title="Close" aria-label="Close">×</button>
-    </div>
-  </div>
+  </Titlebar>
 
   <!-- ── Main area: panels + editor ────────────────────────────────────────── -->
   <div class="flex flex-1 overflow-hidden" role="main">
@@ -734,7 +715,7 @@
     <span>{activeTab?.path ? activeTab.path.split('/').pop() : 'Untitled'}{activeTab?.saved === false ? ' •' : ''}</span>
     <span>{stats.words} words · {stats.lines} lines · {stats.encoding}</span>
   </div>
-</div>
+</WindowFrame>
 
 <style>
   :global(.titlebar-btn) {
@@ -754,22 +735,6 @@
     background: var(--surface-3);
     color: var(--text);
   }
-  :global(.wc-btn) {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 44px;
-    height: 100%;
-    border: none;
-    background: none;
-    cursor: pointer;
-    font-size: 14px;
-    color: var(--text-2);
-    transition: background 120ms, color 120ms;
-  }
-  :global(.wc-btn:hover) { background: var(--surface-3); color: var(--text); }
-  :global(.wc-close:hover) { background: #ef4444 !important; color: white !important; }
-
   :global(.panel-tab) {
     padding: 4px 10px 6px;
     font-size: 11px;
