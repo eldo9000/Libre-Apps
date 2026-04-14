@@ -3,6 +3,10 @@
 // Theme
 export { initTheme } from './theme.js';
 
+// Typed command wrappers (TypeScript — import directly for full types)
+// export * from './api/commands.ts';   // uncomment if bundler handles .ts
+// export * from './api/dialogs.ts';
+
 // Layout
 export { default as WindowFrame } from './components/WindowFrame.svelte';
 export { default as Titlebar }    from './components/Titlebar.svelte';
