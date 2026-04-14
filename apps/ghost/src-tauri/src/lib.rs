@@ -1,24 +1,6 @@
+use librewin_common::{get_accent as lw_get_accent, get_theme as lw_get_theme};
 use tauri::Emitter;
 use tauri::webview::DownloadEvent;
-
-#[tauri::command]
-fn close_window(window: tauri::Window) {
-    let _ = window.close();
-}
-
-#[tauri::command]
-fn minimize_window(window: tauri::Window) {
-    let _ = window.minimize();
-}
-
-#[tauri::command]
-fn toggle_maximize(window: tauri::Window) {
-    if window.is_maximized().unwrap_or(false) {
-        let _ = window.unmaximize();
-    } else {
-        let _ = window.maximize();
-    }
-}
 
 /// Launch a system browser by short name and detach immediately.
 /// The frontend calls this when the user clicks Chrome / Firefox / Brave
@@ -166,21 +148,19 @@ const TOOLBAR_INIT_SCRIPT: &str = r#"
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
 
-/// Read the LibreWin theme preference from the shared config file.
-/// Returns "dark", "light", or "system" (default when file absent).
 #[tauri::command]
-fn get_theme() -> String { librewin_common::get_theme() }
+fn get_theme() -> String { lw_get_theme() }
 
 #[tauri::command]
-fn get_accent() -> String { librewin_common::get_accent() }
+fn get_accent() -> String { lw_get_accent() }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
-            close_window,
-            minimize_window,
-            toggle_maximize,
+            librewin_common::window::close_window,
+            librewin_common::window::minimize_window,
+            librewin_common::window::toggle_maximize,
             launch_app,
             get_theme,
             get_accent,

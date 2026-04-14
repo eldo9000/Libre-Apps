@@ -1,5 +1,7 @@
 pub mod config;
+pub mod media;
 pub mod os;
+pub mod window;
 #[cfg(feature = "tags")]
 pub mod xattr;
 

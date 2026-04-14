@@ -1,3 +1,4 @@
+use librewin_common::{get_accent as lw_get_accent, get_theme as lw_get_theme};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -113,36 +114,13 @@ fn export_html(content: String) -> Result<String, String> {
     Ok(document)
 }
 
-// ── Window controls ───────────────────────────────────────────────────────────
-
-#[tauri::command]
-fn close_window(window: tauri::Window) {
-    let _ = window.close();
-}
-
-#[tauri::command]
-fn minimize_window(window: tauri::Window) {
-    let _ = window.minimize();
-}
-
-#[tauri::command]
-fn toggle_maximize(window: tauri::Window) {
-    if window.is_maximized().unwrap_or(false) {
-        let _ = window.unmaximize();
-    } else {
-        let _ = window.maximize();
-    }
-}
-
 // ── Theme ─────────────────────────────────────────────────────────────────────
 
-/// Read the LibreWin theme preference from the shared config file.
-/// Returns "dark", "light", or "system" (default when file absent).
 #[tauri::command]
-fn get_theme() -> String { librewin_common::get_theme() }
+fn get_theme() -> String { lw_get_theme() }
 
 #[tauri::command]
-fn get_accent() -> String { librewin_common::get_accent() }
+fn get_accent() -> String { lw_get_accent() }
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
@@ -155,9 +133,9 @@ pub fn run() {
             open_file_dialog,
             save_file_dialog,
             export_html,
-            close_window,
-            minimize_window,
-            toggle_maximize,
+            librewin_common::window::close_window,
+            librewin_common::window::minimize_window,
+            librewin_common::window::toggle_maximize,
             get_theme,
             get_accent,
         ])

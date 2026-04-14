@@ -7,6 +7,7 @@ edition = "2021"
 rust-version = "1.77"
 
 [dependencies]
+tauri      = { workspace = true }
 serde      = { workspace = true }
 serde_json = { workspace = true }
 xattr      = { version = "1", optional = true }
