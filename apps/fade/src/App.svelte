@@ -297,9 +297,9 @@
            role="region" aria-label="File queue">
       <Queue
         {queue}
-        on:add={(e) => addFiles(e.detail)}
-        on:remove={(e) => removeItem(e.detail)}
-        on:clear={clearQueue}
+        onadd={(paths) => addFiles(paths)}
+        onremove={(id) => removeItem(id)}
+        onclear={clearQueue}
       />
     </aside>
 

@@ -1,8 +1,5 @@
 <script>
-  import { createEventDispatcher } from 'svelte';
-  const dispatch = createEventDispatcher();
-
-  let { queue } = $props();
+  let { queue, onadd, onremove, onclear } = $props();
 
   function formatSize(bytes) {
     if (!bytes) return '';
@@ -46,7 +43,7 @@
     e.stopPropagation();
     dropActive = false;
     const paths = Array.from(e.dataTransfer?.files ?? []).map(f => f.path ?? f.name);
-    if (paths.length) dispatch('add', paths);
+    if (paths.length) onadd?.(paths);
   }
 </script>
 
@@ -65,7 +62,7 @@
     </span>
     {#if queue.length > 0}
       <button
-        onclick={() => dispatch('clear')}
+        onclick={() => onclear?.()}
         class="text-[11px] text-[var(--text-secondary)] hover:text-red-500 transition-colors"
         aria-label="Clear queue"
       >Clear</button>
@@ -118,7 +115,7 @@
 
           <!-- Remove button -->
           <button
-            onclick={() => dispatch('remove', item.id)}
+            onclick={() => onremove?.(item.id)}
             class="shrink-0 w-5 h-5 flex items-center justify-center rounded
                    text-[var(--text-secondary)] opacity-0 group-hover:opacity-100
                    hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-500
