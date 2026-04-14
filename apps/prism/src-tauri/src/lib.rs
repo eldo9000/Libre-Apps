@@ -1,3 +1,5 @@
+use librewin_common::{get_accent as lw_get_accent, get_theme as lw_get_theme};
+use librewin_common::media::{category_for_ext, mime_for_ext};
 use serde::Serialize;
 use std::fs;
 use std::io::{Read, Seek, SeekFrom};
@@ -11,59 +13,6 @@ pub struct FileInfo {
     pub size: u64,
     pub category: String,
     pub path: String,
-}
-
-fn category_for_ext(ext: &str) -> &'static str {
-    match ext {
-        "png" | "jpg" | "jpeg" | "gif" | "webp" | "svg" | "bmp" | "ico" | "avif" => "image",
-        "heic" | "heif" | "tiff" | "tif" | "psd" | "exr" | "hdr" | "dds"
-        | "raw" | "cr2" | "cr3" | "nef" | "arw" | "dng" | "orf" | "rw2" | "xcf" => "image_convert",
-        "mp4" | "m4v" | "webm" | "mov" | "avi" | "mkv" | "flv" | "wmv"
-        | "mpg" | "mpeg" | "ogv" | "ts" | "3gp" | "divx" | "rmvb" | "asf" => "video",
-        "mp3" | "aac" | "ogg" | "oga" | "wav" | "flac" | "m4a" | "opus"
-        | "wma" | "aiff" | "aif" | "alac" | "ac3" | "dts" => "audio",
-        "pdf" => "pdf",
-        "obj" | "gltf" | "glb" | "stl" | "fbx" | "ply" | "3ds" => "model",
-        _ => "unknown",
-    }
-}
-
-fn mime_for_ext(ext: &str) -> &'static str {
-    match ext {
-        "mp4" | "m4v" => "video/mp4",
-        "webm" => "video/webm",
-        "mov" => "video/quicktime",
-        "avi" => "video/x-msvideo",
-        "mkv" => "video/x-matroska",
-        "ogv" => "video/ogg",
-        "ts" => "video/mp2t",
-        "flv" => "video/x-flv",
-        "wmv" => "video/x-ms-wmv",
-        "3gp" => "video/3gpp",
-        "mpeg" | "mpg" => "video/mpeg",
-        "mp3" => "audio/mpeg",
-        "ogg" | "oga" => "audio/ogg",
-        "wav" => "audio/wav",
-        "flac" => "audio/flac",
-        "aac" => "audio/aac",
-        "m4a" | "alac" => "audio/mp4",
-        "opus" => "audio/ogg; codecs=opus",
-        "wma" => "audio/x-ms-wma",
-        "aiff" | "aif" => "audio/aiff",
-        "png" => "image/png",
-        "jpg" | "jpeg" => "image/jpeg",
-        "gif" => "image/gif",
-        "webp" => "image/webp",
-        "svg" => "image/svg+xml",
-        "bmp" => "image/bmp",
-        "avif" => "image/avif",
-        "pdf" => "application/pdf",
-        "gltf" => "model/gltf+json",
-        "glb" => "model/gltf-binary",
-        "obj" => "text/plain",
-        "stl" => "application/octet-stream",
-        _ => "application/octet-stream",
-    }
 }
 
 fn decode_path(encoded: &str) -> String {
@@ -254,13 +203,11 @@ fn handle_stream(req: tauri::http::Request<Vec<u8>>) -> tauri::http::Response<Ve
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
 
-/// Read the LibreWin theme preference from the shared config file.
-/// Returns "dark", "light", or "system" (default when file absent).
 #[tauri::command]
-fn get_theme() -> String { librewin_common::get_theme() }
+fn get_theme() -> String { lw_get_theme() }
 
 #[tauri::command]
-fn get_accent() -> String { librewin_common::get_accent() }
+fn get_accent() -> String { lw_get_accent() }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

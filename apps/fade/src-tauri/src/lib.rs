@@ -1,4 +1,6 @@
+use librewin_common::{get_accent as lw_get_accent, get_theme as lw_get_theme};
 use librewin_common::config::{read_presets, write_presets, FadePreset};
+use librewin_common::media::media_type_for;
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader};
 use std::path::Path;
@@ -72,20 +74,6 @@ pub struct FileInfo {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-/// Determine media type from file extension.
-fn media_type_for(ext: &str) -> &'static str {
-    match ext.to_lowercase().as_str() {
-        "jpg" | "jpeg" | "png" | "webp" | "tiff" | "tif" | "bmp" | "gif"
-        | "avif" | "heic" | "heif" | "psd" | "svg" | "ico" | "raw"
-        | "cr2" | "nef" | "arw" | "dng" => "image",
-        "mp4" | "mkv" | "webm" | "avi" | "mov" | "m4v" | "flv" | "wmv"
-        | "ts" | "mpg" | "mpeg" | "3gp" | "ogv" => "video",
-        "mp3" | "wav" | "flac" | "ogg" | "aac" | "opus" | "m4a" | "wma"
-        | "aiff" | "alac" => "audio",
-        _ => "unknown",
-    }
-}
 
 /// Get duration from ffprobe JSON output; returns None if unavailable.
 fn probe_duration(path: &str) -> Option<f64> {
@@ -589,10 +577,10 @@ fn run_audio_convert(
 // ── Theme / accent ────────────────────────────────────────────────────────────
 
 #[command]
-fn get_theme() -> String { librewin_common::get_theme() }
+fn get_theme() -> String { lw_get_theme() }
 
 #[command]
-fn get_accent() -> String { librewin_common::get_accent() }
+fn get_accent() -> String { lw_get_accent() }
 
 // ── Custom presets ────────────────────────────────────────────────────────────
 
@@ -621,7 +609,7 @@ fn save_preset(
     }
 
     let preset = FadePreset {
-        id: format!("{}", uuid_v4()),
+        id: uuid_v4().to_string(),
         name,
         media_type,
         output_format,
