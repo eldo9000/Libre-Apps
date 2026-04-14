@@ -1,4 +1,6 @@
+use librewin_common::{get_accent as lw_get_accent, get_theme as lw_get_theme};
 use librewin_common::config::{read_presets, FadePreset};
+use librewin_common::os::resolve_binary;
 use librewin_common::xattr as lx;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -69,7 +71,7 @@ fn list_dir(path: String) -> Result<Vec<FileEntry>, String> {
 
         let entry_path = entry.path().to_string_lossy().to_string();
         let metadata = entry.metadata().ok();
-        let is_dir = metadata.as_ref().map_or(false, |m| m.is_dir());
+        let is_dir = metadata.as_ref().is_some_and(|m| m.is_dir());
         let size = if is_dir {
             None
         } else {
@@ -177,7 +179,7 @@ fn get_volumes() -> Vec<VolumeInfo> {
                 continue;
             }
 
-            let label = mount.split('/').filter(|s| !s.is_empty()).last()
+            let label = mount.split('/').rfind(|s| !s.is_empty())
                 .unwrap_or(mount)
                 .to_string();
 
@@ -195,11 +197,7 @@ fn get_volumes() -> Vec<VolumeInfo> {
 /// Called on startup to decide whether to show the "Copy Windows path" menu item.
 #[command]
 fn get_wine_status() -> WineStatus {
-    let winepath_available = std::process::Command::new("which")
-        .arg("winepath")
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
+    let winepath_available = resolve_binary("winepath").is_some();
 
     let home = std::env::var("HOME").unwrap_or_default();
     let wineprefix_initialized = Path::new(&format!("{home}/.wine")).exists();
@@ -212,20 +210,15 @@ fn get_wine_status() -> WineStatus {
 /// Returns Err("wine_not_initialized") if ~/.wine does not exist yet.
 #[command]
 fn get_windows_path(path: String) -> Result<String, String> {
-    let which = std::process::Command::new("which")
-        .arg("winepath")
-        .output()
-        .map_err(|e| e.to_string())?;
-    if !which.status.success() {
-        return Err("winepath_not_found".to_string());
-    }
+    let winepath = resolve_binary("winepath")
+        .ok_or_else(|| "winepath_not_found".to_string())?;
 
     let home = std::env::var("HOME").unwrap_or_default();
     if !Path::new(&format!("{home}/.wine")).exists() {
         return Err("wine_not_initialized".to_string());
     }
 
-    let out = std::process::Command::new("winepath")
+    let out = std::process::Command::new(&winepath)
         .arg("-w")
         .arg(&path)
         .output()
@@ -449,13 +442,11 @@ fn quick_convert(window: tauri::Window, path: String, preset: String) -> Result<
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
 
-/// Read the LibreWin theme preference from the shared config file.
-/// Returns "dark", "light", or "system" (default when file absent).
 #[tauri::command]
-fn get_theme() -> String { librewin_common::get_theme() }
+fn get_theme() -> String { lw_get_theme() }
 
 #[tauri::command]
-fn get_accent() -> String { librewin_common::get_accent() }
+fn get_accent() -> String { lw_get_accent() }
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
