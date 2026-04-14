@@ -2,11 +2,3 @@
 @import "@fontsource/geist/latin.css";
 @import "@libre/ui/src/tokens.css";
 @variant dark (&:where(.dark, .dark *));
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-.animate-fade-in {
-  animation: fadeIn 150ms ease-out both;
-}

@@ -1,26 +1,21 @@
 <script>
-  import { getCurrentWindow } from '@tauri-apps/api/window';
   import { invoke } from '@tauri-apps/api/core';
   import { listen } from '@tauri-apps/api/event';
   import { onMount, onDestroy } from 'svelte';
-  import { initTheme } from '@libre/ui/src/theme.js';
+  import { WindowFrame, Titlebar, TabBar, ProgressBar } from '@libre/ui';
   import Queue from './lib/Queue.svelte';
   import ImageOptions from './lib/ImageOptions.svelte';
   import VideoOptions from './lib/VideoOptions.svelte';
   import AudioOptions from './lib/AudioOptions.svelte';
 
-  const appWindow = getCurrentWindow();
-
   // ── State ──────────────────────────────────────────────────────────────────
 
-  // Queue: array of { id, path, name, ext, mediaType, status, percent, error }
   let queue = $state([]);
   let activeTab = $state('image'); // 'image' | 'video' | 'audio'
   let converting = $state(false);
   let overallPercent = $state(0);
   let statusMessage = $state('');
 
-  // Options state (shared across tabs, components read/write via bind)
   let imageOptions = $state({
     output_format: 'webp',
     resize_mode: 'none',
@@ -68,9 +63,6 @@
   let unlistenProgress, unlistenDone, unlistenError;
 
   onMount(async () => {
-    const themeCleanup = await initTheme(invoke);
-
-    // Tauri events from convert_file background threads
     unlistenProgress = await listen('job-progress', ({ payload }) => {
       const item = queue.find(q => q.id === payload.job_id);
       if (item) {
@@ -78,7 +70,6 @@
         item.percent = payload.percent;
         statusMessage = payload.message;
       }
-      // Overall = average of all converting/done
       updateOverall();
     });
 
@@ -102,8 +93,6 @@
       updateOverall();
       checkAllDone();
     });
-
-    return themeCleanup;
 
     loadPresets();
   });
@@ -130,7 +119,6 @@
     }
   }
 
-  // Add files to queue (called from Queue component drop handler or file picker)
   async function addFiles(paths) {
     for (const path of paths) {
       const name = path.split('/').pop() ?? path;
@@ -139,7 +127,6 @@
       const id = crypto.randomUUID();
       queue.push({ id, path, name, ext, mediaType: mt, status: 'pending', percent: 0 });
     }
-    // Auto-switch tab to dominant media type
     const types = queue.map(q => q.mediaType);
     if (types.every(t => t === 'image')) activeTab = 'image';
     else if (types.every(t => t === 'video')) activeTab = 'video';
@@ -181,7 +168,6 @@
       item.status = 'converting';
       item.percent = 0;
 
-      // Build options object based on file's media type
       let opts;
       if (item.mediaType === 'image') {
         opts = { ...imageOptions, output_suffix: outputSuffix };
@@ -191,7 +177,6 @@
         opts = { ...audioOptions, output_suffix: outputSuffix };
       }
 
-      // Fire and forget — progress comes back via events
       invoke('convert_file', {
         jobId: item.id,
         inputPath: item.path,
@@ -206,10 +191,19 @@
 
   // ── Drag over window ───────────────────────────────────────────────────────
 
-  // Output suffix (shared across all media types)
   let outputSuffix = $state('converted');
+  let dragOver = $state(false);
 
-  // ── Custom presets ─────────────────────────────────────────────────────────
+  function onWindowDragover(e) { e.preventDefault(); dragOver = true; }
+  function onWindowDragleave(e) { if (!e.relatedTarget) dragOver = false; }
+  function onWindowDrop(e) {
+    e.preventDefault();
+    dragOver = false;
+    const paths = Array.from(e.dataTransfer?.files ?? []).map(f => f.path ?? f.name);
+    if (paths.length) addFiles(paths);
+  }
+
+  // ── Presets ────────────────────────────────────────────────────────────────
 
   let presets = $state([]);
   let presetsOpen = $state(false);
@@ -227,8 +221,7 @@
     let src = tab === 'image' ? imageOptions : tab === 'video' ? videoOptions : audioOptions;
     try {
       const saved = await invoke('save_preset', {
-        name,
-        mediaType: tab,
+        name, mediaType: tab,
         outputFormat: src.output_format,
         quality: tab === 'image' ? src.quality : null,
         codec: tab === 'video' ? src.codec : null,
@@ -238,18 +231,14 @@
       presets = [...presets, saved];
       presetNameInput = '';
       presetSaving = false;
-    } catch (e) {
-      console.error('Save preset failed:', e);
-    }
+    } catch (e) { console.error('Save preset failed:', e); }
   }
 
   async function deletePreset(id) {
     try {
       await invoke('delete_preset', { id });
       presets = presets.filter(p => p.id !== id);
-    } catch (e) {
-      console.error('Delete preset failed:', e);
-    }
+    } catch (e) { console.error('Delete preset failed:', e); }
   }
 
   function loadPresetIntoOptions(preset) {
@@ -272,45 +261,21 @@
     presetsOpen = false;
   }
 
-  let dragOver = $state(false);
-
-  function onWindowDragover(e) {
-    e.preventDefault();
-    dragOver = true;
-  }
-  function onWindowDragleave(e) {
-    if (!e.relatedTarget) dragOver = false;
-  }
-  function onWindowDrop(e) {
-    e.preventDefault();
-    dragOver = false;
-    const paths = Array.from(e.dataTransfer?.files ?? []).map(f => f.path ?? f.name);
-    if (paths.length) addFiles(paths);
-  }
+  const mediaTabs = [
+    { id: 'image', label: 'Image' },
+    { id: 'video', label: 'Video' },
+    { id: 'audio', label: 'Audio' },
+  ];
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div
-  class="relative flex flex-col h-full bg-[var(--surface)] overflow-hidden"
+<WindowFrame
   ondragover={onWindowDragover}
   ondragleave={onWindowDragleave}
   ondrop={onWindowDrop}
 >
-
-  <!-- Resize strip -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div
-    class="absolute top-[8px] left-0 right-0 h-[4px] z-50 cursor-n-resize"
-    onmousedown={(e) => { e.preventDefault(); appWindow.startResizeDragging('North'); }}
-  ></div>
-
   <!-- Titlebar -->
-  <div
-    data-tauri-drag-region
-    class="h-8 bg-[var(--titlebar-bg)] border-b border-[var(--border)]
-           flex items-center shrink-0 select-none"
-  >
-    <!-- Icon + name -->
+  <Titlebar>
     <div class="flex items-center gap-2 pl-3 flex-1 min-w-0" data-tauri-drag-region>
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
            stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
@@ -322,23 +287,7 @@
       </svg>
       <span class="text-[13px] font-medium text-[var(--text-primary)] truncate">Fade</span>
     </div>
-
-    <!-- Window controls -->
-    <div class="flex items-center shrink-0 h-full">
-      <button onclick={() => appWindow.minimize()}
-        class="w-11 h-full flex items-center justify-center text-[var(--text-secondary)]
-               hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-[16px] leading-none"
-        title="Minimize" aria-label="Minimize">─</button>
-      <button onclick={() => appWindow.toggleMaximize()}
-        class="w-11 h-full flex items-center justify-center text-[var(--text-secondary)]
-               hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-[13px]"
-        title="Maximize" aria-label="Maximize">□</button>
-      <button onclick={() => appWindow.close()}
-        class="w-11 h-full flex items-center justify-center text-[var(--text-secondary)]
-               hover:bg-red-500 hover:text-white transition-colors text-[18px]"
-        title="Close" aria-label="Close">×</button>
-    </div>
-  </div>
+  </Titlebar>
 
   <!-- Body: queue sidebar + main panel -->
   <div class="flex flex-1 min-h-0">
@@ -358,20 +307,7 @@
     <div class="flex flex-col flex-1 min-w-0">
 
       <!-- Tab bar -->
-      <div class="flex border-b border-[var(--border)] bg-[var(--surface-raised)] shrink-0"
-           role="tablist" aria-label="Media type">
-        {#each [['image','Image'],['video','Video'],['audio','Audio']] as [id, label]}
-          <button
-            role="tab"
-            aria-selected={activeTab === id}
-            onclick={() => activeTab = id}
-            class="px-5 py-2 text-[13px] font-medium border-b-2 transition-colors
-              {activeTab === id
-                ? 'border-[var(--accent)] text-[var(--accent)]'
-                : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}"
-          >{label}</button>
-        {/each}
-      </div>
+      <TabBar tabs={mediaTabs} active={activeTab} onSelect={(id) => activeTab = id} />
 
       <!-- Options panel -->
       <div class="flex-1 min-h-0 overflow-y-auto p-5" role="tabpanel">
@@ -384,14 +320,12 @@
         {/if}
       </div>
 
-      <!-- Presets popover (sits above the action bar) -->
+      <!-- Presets popover -->
       {#if presetsOpen}
         <div class="fixed inset-0 z-30" aria-hidden="true" onclick={() => { presetsOpen = false; presetSaving = false; }}></div>
         <div class="absolute bottom-[52px] right-4 z-40 w-64
                     bg-[var(--surface-raised)] border border-[var(--border)]
                     rounded-lg shadow-lg overflow-hidden">
-
-          <!-- Saved presets for active tab -->
           {#each presets.filter(p => p.media_type === activeTab) as p (p.id)}
             <div class="flex items-center gap-1 px-3 py-1.5 hover:bg-[var(--surface)] group">
               <button
@@ -408,14 +342,11 @@
               >×</button>
             </div>
           {:else}
-            <p class="px-3 py-2 text-[12px] text-[var(--text-secondary)]">
-              No {activeTab} presets yet
-            </p>
+            <p class="px-3 py-2 text-[12px] text-[var(--text-secondary)]">No {activeTab} presets yet</p>
           {/each}
 
           <div class="border-t border-[var(--border)]">
             {#if presetSaving}
-              <!-- Save form -->
               <div class="flex items-center gap-1.5 px-3 py-2">
                 <!-- svelte-ignore a11y_autofocus -->
                 <input
@@ -458,19 +389,13 @@
             {/if}
           </div>
           {#if converting || overallPercent > 0}
-            <div class="h-1.5 rounded-full bg-[var(--border)] overflow-hidden">
-              <div
-                class="h-full bg-[var(--accent)] transition-all duration-300 rounded-full"
-                style="width: {overallPercent}%"
-              ></div>
-            </div>
+            <ProgressBar value={overallPercent} />
           {/if}
         </div>
 
         <!-- Suffix input -->
         <div class="flex items-center gap-1.5 shrink-0">
-          <label for="output-suffix"
-                 class="text-[12px] text-[var(--text-secondary)] whitespace-nowrap">
+          <label for="output-suffix" class="text-[12px] text-[var(--text-secondary)] whitespace-nowrap">
             Suffix
           </label>
           <input
@@ -495,7 +420,6 @@
                  hover:text-[var(--text-primary)] hover:border-[var(--accent)]
                  {presetsOpen ? 'border-[var(--accent)] text-[var(--accent)]' : ''}"
           aria-label="Presets"
-          title="Presets"
         >Presets</button>
 
         <!-- Convert button -->
@@ -523,4 +447,4 @@
     </div>
   {/if}
 
-</div>
+</WindowFrame>

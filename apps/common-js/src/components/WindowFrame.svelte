@@ -22,11 +22,11 @@
    * independently.
    */
 
-  let { children } = $props();
+  let { children, ...rest } = $props();
 
   onMount(() => initTheme(invoke));
 </script>
 
-<div class="relative flex flex-col h-full bg-[var(--surface)] overflow-hidden">
+<div class="relative flex flex-col h-full bg-[var(--surface)] overflow-hidden" {...rest}>
   {@render children?.()}
 </div>
