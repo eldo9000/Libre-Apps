@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
   import { getCurrentWindow } from '@tauri-apps/api/window';
-  import { WindowFrame, Titlebar } from '@libre/ui';
+  import { WindowFrame, Titlebar, Input } from '@libre/ui';
   import { EditorView, keymap, lineNumbers, drawSelection, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view';
   import { EditorState, Compartment } from '@codemirror/state';
   import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
@@ -675,25 +675,17 @@
         {:else if rightTab === 'search'}
           <!-- Search & Replace -->
           <div class="flex-1 overflow-y-auto p-3 space-y-3">
-            <div class="space-y-1">
-              <label class="text-xs font-medium" style="color: var(--text-2);">Find</label>
-              <input
-                bind:value={searchQuery}
-                onkeydown={(e) => e.key === 'Enter' && doSearch()}
-                placeholder="Search…"
-                class="w-full text-xs rounded px-2 py-1.5 border"
-                style="background: var(--surface); color: var(--text); border-color: var(--border);"
-              />
-            </div>
-            <div class="space-y-1">
-              <label class="text-xs font-medium" style="color: var(--text-2);">Replace</label>
-              <input
-                bind:value={replaceQuery}
-                placeholder="Replace with…"
-                class="w-full text-xs rounded px-2 py-1.5 border"
-                style="background: var(--surface); color: var(--text); border-color: var(--border);"
-              />
-            </div>
+            <Input
+              bind:value={searchQuery}
+              label="Find"
+              placeholder="Search…"
+              onkeydown={(e) => e.key === 'Enter' && doSearch()}
+            />
+            <Input
+              bind:value={replaceQuery}
+              label="Replace"
+              placeholder="Replace with…"
+            />
             <label class="flex items-center gap-2 text-xs cursor-pointer">
               <input type="checkbox" bind:checked={searchCaseSensitive} class="accent-[var(--accent)]" />
               <span style="color: var(--text);">Case sensitive</span>
