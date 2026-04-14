@@ -126,7 +126,7 @@ All apps share the same visual language. See `Business-OS/ENGINEERING_STANDARDS.
 - **Accent:** `#0066cc` via `--accent` CSS variable (user-configurable via `~/.config/librewin/accent`) — `#297acc` was the old erroneous default; all CSS `:root` blocks and Rust `get_accent` fallbacks must use `#0066cc`
 - **Font:** Geist, 14px base, 1.5 line height, antialiased
 - **Spacing:** 4px base unit, compact density (`py-1.5 px-3`)
-- **Window chrome:** Custom titlebar, `decorations: false`, `transparent: true`, 12px border-radius, drop shadow
+- **Window chrome:** Custom titlebar, `decorations: false`, `transparent: true`, 10px border-radius, drop shadow
 - **Scrollbars:** 6px width, semi-transparent thumb
 - **Motion:** Minimal and functional only — 120ms fade, 200ms fly, no decorative animation
 - **Theme sync:** All apps read from `~/.config/librewin/theme` and `~/.config/librewin/accent`

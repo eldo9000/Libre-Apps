@@ -61,7 +61,7 @@ html, body { background: transparent; }
 }
 
 #app > div:first-child {
-  border-radius: 20px !important;
+  border-radius: 10px !important;
   overflow: hidden;
   box-shadow: 0 1px 8px rgba(0, 0, 0, 0.24);
 }
