@@ -2,19 +2,29 @@
   import { invoke } from '@tauri-apps/api/core';
   import { listen } from '@tauri-apps/api/event';
   import { onMount, onDestroy } from 'svelte';
-  import { WindowFrame, Titlebar, TabBar, ProgressBar } from '@libre/ui';
+  import { WindowFrame, Titlebar, TabBar, ProgressBar, Dialog } from '@libre/ui';
   import Queue from './lib/Queue.svelte';
   import ImageOptions from './lib/ImageOptions.svelte';
   import VideoOptions from './lib/VideoOptions.svelte';
   import AudioOptions from './lib/AudioOptions.svelte';
+  import { mediaTypeFor, validateOptions, formatBytes, formatDuration } from './lib/utils.js';
 
   // ── State ──────────────────────────────────────────────────────────────────
 
   let queue = $state([]);
   let activeTab = $state('image'); // 'image' | 'video' | 'audio'
   let converting = $state(false);
+  let paused = $state(false);
   let overallPercent = $state(0);
   let statusMessage = $state('');
+  let validationErrors = $state({});
+  let toolWarnings = $state({}); // { ffmpeg: false, ffprobe: false, magick: false }
+
+  // File info dialog
+  let fileInfoOpen = $state(false);
+  let fileInfoData = $state(null);
+  let fileInfoItem = $state(null);
+  let fileInfoLoading = $state(false);
 
   let imageOptions = $state({
     output_format: 'webp',
@@ -60,7 +70,7 @@
 
   // ── Event listeners ────────────────────────────────────────────────────────
 
-  let unlistenProgress, unlistenDone, unlistenError;
+  let unlistenProgress, unlistenDone, unlistenError, unlistenCancelled;
 
   onMount(async () => {
     unlistenProgress = await listen('job-progress', ({ payload }) => {
@@ -94,14 +104,47 @@
       checkAllDone();
     });
 
+    unlistenCancelled = await listen('job-cancelled', ({ payload }) => {
+      const item = queue.find(q => q.id === payload.job_id);
+      if (item) {
+        item.status = 'cancelled';
+        item.percent = 0;
+      }
+      updateOverall();
+      checkAllDone();
+    });
+
     loadPresets();
+    checkTools();
   });
 
   onDestroy(() => {
     unlistenProgress?.();
     unlistenDone?.();
     unlistenError?.();
+    unlistenCancelled?.();
   });
+
+  // ── Tool detection ─────────────────────────────────────────────────────────
+
+  async function checkTools() {
+    try {
+      const result = await invoke('check_tools');
+      toolWarnings = {
+        ffmpeg: !result.ffmpeg,
+        ffprobe: !result.ffprobe,
+        magick: !result.magick,
+      };
+    } catch { /* non-fatal */ }
+  }
+
+  let dismissedWarnings = $state(new Set());
+
+  function dismissWarning(tool) {
+    const next = new Set(dismissedWarnings);
+    next.add(tool);
+    dismissedWarnings = next;
+  }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -112,10 +155,18 @@
   }
 
   function checkAllDone() {
-    const pending = queue.filter(q => q.status === 'converting' || q.status === 'pending');
-    if (pending.length === 0) {
+    const active = queue.filter(q => q.status === 'converting' || q.status === 'pending');
+    if (active.length === 0) {
       converting = false;
-      statusMessage = `Done — ${queue.filter(q => q.status === 'done').length} file(s) converted`;
+      paused = false;
+      const done = queue.filter(q => q.status === 'done').length;
+      const cancelled = queue.filter(q => q.status === 'cancelled').length;
+      const errored = queue.filter(q => q.status === 'error').length;
+      const parts = [];
+      if (done) parts.push(`${done} converted`);
+      if (cancelled) parts.push(`${cancelled} cancelled`);
+      if (errored) parts.push(`${errored} failed`);
+      statusMessage = parts.length ? `Done — ${parts.join(', ')}` : 'Done';
     }
   }
 
@@ -133,16 +184,6 @@
     else if (types.every(t => t === 'audio')) activeTab = 'audio';
   }
 
-  function mediaTypeFor(ext) {
-    const images = ['jpg','jpeg','png','webp','tiff','tif','bmp','gif','avif','heic','heif','psd','svg','ico','raw','cr2','nef','arw','dng'];
-    const videos = ['mp4','mkv','webm','avi','mov','m4v','flv','wmv','ts','mpg','mpeg','3gp','ogv'];
-    const audios = ['mp3','wav','flac','ogg','aac','opus','m4a','wma','aiff'];
-    if (images.includes(ext)) return 'image';
-    if (videos.includes(ext)) return 'video';
-    if (audios.includes(ext)) return 'audio';
-    return 'unknown';
-  }
-
   function removeItem(id) {
     queue = queue.filter(q => q.id !== id);
     updateOverall();
@@ -153,18 +194,99 @@
     overallPercent = 0;
     statusMessage = '';
     converting = false;
+    paused = false;
+    validationErrors = {};
+  }
+
+  // ── Cancel / Pause ─────────────────────────────────────────────────────────
+
+  async function cancelJob(id) {
+    try {
+      await invoke('cancel_job', { jobId: id });
+    } catch (e) {
+      console.error('cancel_job failed:', e);
+    }
+  }
+
+  async function cancelAll() {
+    const active = queue.filter(q => q.status === 'converting');
+    for (const item of active) {
+      await cancelJob(item.id);
+    }
+    // Mark pending items as cancelled too (they were queued but not yet dispatched)
+    for (const item of queue) {
+      if (item.status === 'pending') {
+        item.status = 'cancelled';
+      }
+    }
+    paused = false;
+    checkAllDone();
+  }
+
+  function togglePause() {
+    if (paused) {
+      paused = false;
+      startConvert();
+    } else {
+      paused = true;
+      statusMessage = 'Paused — click Resume to continue';
+    }
+  }
+
+  // ── File info dialog ───────────────────────────────────────────────────────
+
+  async function showFileInfo(item) {
+    fileInfoItem = item;
+    fileInfoOpen = true;
+    fileInfoData = null;
+    fileInfoLoading = true;
+    try {
+      fileInfoData = await invoke('get_file_info', { path: item.path });
+    } catch (e) {
+      fileInfoData = { error: String(e) };
+    } finally {
+      fileInfoLoading = false;
+    }
+  }
+
+  function estimatedOutputSize(info) {
+    if (!info || info.error) return null;
+    if (info.media_type === 'image') {
+      const q = imageOptions.quality ?? 85;
+      return Math.round(info.file_size * (q / 100));
+    }
+    if (info.media_type === 'video' && info.duration_secs) {
+      const br = (videoOptions.bitrate ?? 192) * 1000 / 8;
+      return Math.round(info.duration_secs * br);
+    }
+    if (info.media_type === 'audio' && info.duration_secs) {
+      const br = (audioOptions.bitrate ?? 192) * 1000 / 8;
+      return Math.round(info.duration_secs * br);
+    }
+    return null;
   }
 
   // ── Convert ────────────────────────────────────────────────────────────────
 
   async function startConvert() {
+    // Validate before dispatching
+    const errors = validateOptions(videoOptions, audioOptions);
+    if (Object.keys(errors).length > 0) {
+      validationErrors = errors;
+      return;
+    }
+    validationErrors = {};
+
     const pending = queue.filter(q => q.status === 'pending' || q.status === 'error');
     if (pending.length === 0) return;
 
     converting = true;
+    paused = false;
     statusMessage = 'Converting…';
 
     for (const item of pending) {
+      if (paused) break; // pause between items (not mid-FFmpeg)
+
       item.status = 'converting';
       item.percent = 0;
 
@@ -211,7 +333,7 @@
   let presetNameInput = $state('');
 
   async function loadPresets() {
-    try { presets = await invoke('list_presets'); } catch { /* no-op: presets stay empty */ }
+    try { presets = await invoke('list_presets'); } catch { /* no-op */ }
   }
 
   async function savePreset() {
@@ -266,6 +388,7 @@
     { id: 'video', label: 'Video' },
     { id: 'audio', label: 'Audio' },
   ];
+
 </script>
 
 <WindowFrame
@@ -299,6 +422,8 @@
         onadd={(paths) => addFiles(paths)}
         onremove={(id) => removeItem(id)}
         onclear={clearQueue}
+        oncancel={(id) => cancelJob(id)}
+        oninfo={(item) => showFileInfo(item)}
       />
     </aside>
 
@@ -308,14 +433,36 @@
       <!-- Tab bar -->
       <TabBar tabs={mediaTabs} active={activeTab} onSelect={(id) => activeTab = id} />
 
+      <!-- Tool warning banners -->
+      {#if toolWarnings.ffmpeg && !dismissedWarnings.has('ffmpeg')}
+        <div class="flex items-center justify-between gap-2 px-4 py-2
+                    bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800
+                    text-[12px] text-amber-800 dark:text-amber-200 shrink-0">
+          <span>FFmpeg not found — install <code class="font-mono">ffmpeg</code> to convert video and audio</span>
+          <button onclick={() => dismissWarning('ffmpeg')}
+                  class="shrink-0 text-amber-600 hover:text-amber-800 dark:hover:text-amber-100"
+                  aria-label="Dismiss">×</button>
+        </div>
+      {/if}
+      {#if toolWarnings.magick && !dismissedWarnings.has('magick')}
+        <div class="flex items-center justify-between gap-2 px-4 py-2
+                    bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800
+                    text-[12px] text-amber-800 dark:text-amber-200 shrink-0">
+          <span>ImageMagick not found — install <code class="font-mono">imagemagick</code> to convert images</span>
+          <button onclick={() => dismissWarning('magick')}
+                  class="shrink-0 text-amber-600 hover:text-amber-800 dark:hover:text-amber-100"
+                  aria-label="Dismiss">×</button>
+        </div>
+      {/if}
+
       <!-- Options panel -->
       <div class="flex-1 min-h-0 overflow-y-auto p-5" role="tabpanel">
         {#if activeTab === 'image'}
           <ImageOptions bind:options={imageOptions} />
         {:else if activeTab === 'video'}
-          <VideoOptions bind:options={videoOptions} />
+          <VideoOptions bind:options={videoOptions} errors={validationErrors} />
         {:else}
-          <AudioOptions bind:options={audioOptions} />
+          <AudioOptions bind:options={audioOptions} errors={validationErrors} />
         {/if}
       </div>
 
@@ -421,6 +568,24 @@
           aria-label="Presets"
         >Presets</button>
 
+        <!-- Pause/Resume button (visible when converting) -->
+        {#if converting}
+          <button
+            onclick={togglePause}
+            class="px-3 py-1.5 rounded-md text-[13px] font-medium transition-colors shrink-0
+                   border border-[var(--border)] text-[var(--text-secondary)]
+                   hover:text-[var(--text-primary)] hover:border-[var(--accent)]"
+          >{paused ? 'Resume' : 'Pause'}</button>
+
+          <!-- Cancel All button -->
+          <button
+            onclick={cancelAll}
+            class="px-3 py-1.5 rounded-md text-[13px] font-medium transition-colors shrink-0
+                   border border-red-300 text-red-500
+                   hover:border-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+          >Cancel All</button>
+        {/if}
+
         <!-- Convert button -->
         <button
           onclick={startConvert}
@@ -445,5 +610,55 @@
       <p class="text-[var(--accent)] text-lg font-medium">Drop files to add</p>
     </div>
   {/if}
+
+  <!-- File info dialog -->
+  <Dialog
+    bind:open={fileInfoOpen}
+    title={fileInfoItem ? fileInfoItem.name : 'File Info'}
+    size="sm"
+    onclose={() => { fileInfoOpen = false; fileInfoData = null; fileInfoItem = null; }}
+  >
+    {#if fileInfoLoading}
+      <p class="text-[var(--text-secondary)] text-[13px]">Loading…</p>
+    {:else if fileInfoData?.error}
+      <p class="text-red-500 text-[12px]">{fileInfoData.error}</p>
+    {:else if fileInfoData}
+      {@const estSize = estimatedOutputSize(fileInfoData)}
+      <dl class="space-y-2 text-[13px]">
+        <div class="flex justify-between">
+          <dt class="text-[var(--text-secondary)]">Format</dt>
+          <dd class="text-[var(--text-primary)] font-mono uppercase">{fileInfoData.format ?? fileInfoData.media_type}</dd>
+        </div>
+        {#if fileInfoData.codec}
+          <div class="flex justify-between">
+            <dt class="text-[var(--text-secondary)]">Codec</dt>
+            <dd class="text-[var(--text-primary)] font-mono">{fileInfoData.codec}</dd>
+          </div>
+        {/if}
+        {#if fileInfoData.width && fileInfoData.height}
+          <div class="flex justify-between">
+            <dt class="text-[var(--text-secondary)]">Resolution</dt>
+            <dd class="text-[var(--text-primary)] font-mono">{fileInfoData.width}×{fileInfoData.height}</dd>
+          </div>
+        {/if}
+        {#if fileInfoData.duration_secs}
+          <div class="flex justify-between">
+            <dt class="text-[var(--text-secondary)]">Duration</dt>
+            <dd class="text-[var(--text-primary)] font-mono">{formatDuration(fileInfoData.duration_secs)}</dd>
+          </div>
+        {/if}
+        <div class="flex justify-between">
+          <dt class="text-[var(--text-secondary)]">File size</dt>
+          <dd class="text-[var(--text-primary)] font-mono">{formatBytes(fileInfoData.file_size)}</dd>
+        </div>
+        {#if estSize}
+          <div class="flex justify-between border-t border-[var(--border)] pt-2 mt-2">
+            <dt class="text-[var(--text-secondary)]">Est. output size</dt>
+            <dd class="text-[var(--text-primary)] font-mono">{formatBytes(estSize)} <span class="text-[11px] text-[var(--text-secondary)]">(approx)</span></dd>
+          </div>
+        {/if}
+      </dl>
+    {/if}
+  </Dialog>
 
 </WindowFrame>

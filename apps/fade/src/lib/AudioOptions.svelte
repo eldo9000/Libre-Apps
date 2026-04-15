@@ -1,5 +1,5 @@
 <script>
-  let { options = $bindable() } = $props();
+  let { options = $bindable(), errors = {} } = $props();
 
   const formats = ['mp3','flac','wav','ogg','aac','opus','m4a'];
   const bitrates = [64, 128, 192, 256, 320];
@@ -153,9 +153,10 @@
         <input id="aud-trim-end" type="text" placeholder="end"
           bind:value={trimEndRaw}
           onchange={onTrimEndChange}
-          class="w-full mt-1 px-3 py-1.5 rounded-md border border-[var(--border)]
-                 bg-[var(--surface)] text-[var(--text-primary)] text-[13px]
-                 focus:outline-none focus:border-[var(--accent)]"
+          class="w-full mt-1 px-3 py-1.5 rounded-md text-[13px]
+                 focus:outline-none focus:border-[var(--accent)]
+                 bg-[var(--surface)] text-[var(--text-primary)]
+                 {errors.audio_trim ? 'border border-red-500' : 'border border-[var(--border)]'}"
         />
       </div>
       {#if options.trim_start != null || options.trim_end != null}
@@ -166,7 +167,11 @@
         </button>
       {/if}
     </div>
-    <p class="text-[11px] text-[var(--text-secondary)] mt-1.5">Leave blank to keep full duration.</p>
+    {#if errors.audio_trim}
+      <p class="text-[11px] text-red-500 mt-1">{errors.audio_trim}</p>
+    {:else}
+      <p class="text-[11px] text-[var(--text-secondary)] mt-1.5">Leave blank to keep full duration.</p>
+    {/if}
   </fieldset>
 
   <!-- Loudness normalization -->
