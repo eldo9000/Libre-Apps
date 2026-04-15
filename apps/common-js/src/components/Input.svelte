@@ -50,10 +50,11 @@
     ...restProps
   } = $props();
 
-  // Stable ID for label association — generated once, not reactive (Math.random must not re-run)
-  const inputId = explicitId ?? `input-${Math.random().toString(36).slice(2, 8)}`;
+  // Stable generated fallback ID — computed once at init, never re-runs Math.random on prop change
+  const _generatedId = `input-${Math.random().toString(36).slice(2, 8)}`;
+  let inputId = $derived(explicitId ?? _generatedId);
   /* eslint-enable svelte/valid-compile */
-  const errorId = `${inputId}-error`;
+  const errorId = `${_generatedId}-error`;
 </script>
 
 <div class="flex flex-col gap-1 {extraClass}">

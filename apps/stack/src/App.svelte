@@ -6,9 +6,11 @@
   import { EditorView, keymap, lineNumbers, drawSelection, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view';
   import { EditorState, Compartment } from '@codemirror/state';
   import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
+  import { indentUnit } from '@codemirror/language';
   import { markdown } from '@codemirror/lang-markdown';
   import { oneDark } from '@codemirror/theme-one-dark';
-  import { searchKeymap, search } from '@codemirror/search';
+  import { searchKeymap, search, SearchQuery, setSearchQuery, findNext, findPrevious, replaceNext, replaceAll } from '@codemirror/search';
+  import { applyLineEnding } from './lib/utils.js';
 
   const appWindow = getCurrentWindow();
 
@@ -26,6 +28,9 @@
       charCount: 0,
       lineCount: 1,
       encoding: 'UTF-8',
+      lineEnding: 'LF',
+      tabSize: 4,
+      indentStyle: 'spaces',
     };
   }
 
@@ -52,8 +57,10 @@
   let editorEl = null;
   let view = null;
   const themeCompartment = new Compartment();
+  const tabSizeCompartment = new Compartment();
+  const indentCompartment = new Compartment();
 
-  function buildState(content, dark) {
+  function buildState(content, dark, format = {}) {
     return EditorState.create({
       doc: content,
       extensions: [
@@ -65,6 +72,8 @@
         search({ top: false }),
         markdown(),
         themeCompartment.of(dark ? oneDark : EditorView.theme({}, { dark: false })),
+        tabSizeCompartment.of(EditorState.tabSize.of(format.tabSize ?? 4)),
+        indentCompartment.of(indentUnit.of(format.indentStyle === 'tabs' ? '\t' : ' '.repeat(format.tabSize ?? 4))),
         keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
@@ -75,6 +84,7 @@
             tab.saved = false;
             updateStats(tab, doc);
             updateOutline(doc);
+            if (searchQuery) matchCount = countMatches();
           }
         }),
         EditorView.lineWrapping,
@@ -106,6 +116,7 @@
     outline = items;
   }
 
+
   function jumpToHeading(text) {
     if (!view) return;
     const doc = view.state.doc.toString();
@@ -130,27 +141,47 @@
   let searchQuery = $state('');
   let replaceQuery = $state('');
   let searchCaseSensitive = $state(false);
+  let matchCount = $state(0);
 
-  function doSearch() {
+  function buildSearchQuery() {
+    return new SearchQuery({ search: searchQuery, replace: replaceQuery, caseSensitive: searchCaseSensitive });
+  }
+
+  function countMatches() {
+    if (!view || !searchQuery.trim()) return 0;
+    const q = new SearchQuery({ search: searchQuery, caseSensitive: searchCaseSensitive });
+    const cursor = q.getCursor(view.state.doc);
+    let n = 0;
+    while (!cursor.next().done) n++;
+    return n;
+  }
+
+  function doFindNext() {
     if (!view || !searchQuery) return;
-    // Open CM search panel programmatically
-    import('@codemirror/search').then(({ openSearchPanel }) => {
-      openSearchPanel(view);
-    });
+    view.dispatch({ effects: setSearchQuery.of(buildSearchQuery()) });
+    findNext(view);
+    view.focus();
+  }
+
+  function doFindPrev() {
+    if (!view || !searchQuery) return;
+    view.dispatch({ effects: setSearchQuery.of(buildSearchQuery()) });
+    findPrevious(view);
+    view.focus();
   }
 
   function doReplace() {
     if (!view || !searchQuery) return;
-    import('@codemirror/search').then(({ replaceNext }) => {
-      replaceNext(view);
-    });
+    view.dispatch({ effects: setSearchQuery.of(buildSearchQuery()) });
+    replaceNext(view);
+    view.focus();
   }
 
   function doReplaceAll() {
     if (!view || !searchQuery) return;
-    import('@codemirror/search').then(({ replaceAll }) => {
-      replaceAll(view);
-    });
+    view.dispatch({ effects: setSearchQuery.of(buildSearchQuery()) });
+    replaceAll(view);
+    view.focus();
   }
 
   // ── File ops ─────────────────────────────────────────────────────────────────
@@ -185,7 +216,8 @@
   async function saveFile() {
     const tab = activeTab;
     if (!tab) return;
-    const content = view ? view.state.doc.toString() : tab.content;
+    let content = view ? view.state.doc.toString() : tab.content;
+    content = applyLineEnding(content, tab.lineEnding ?? 'LF');
     try {
       if (tab.path) {
         await invoke('write_file', { path: tab.path, content });
@@ -202,7 +234,8 @@
   async function saveFileAs() {
     const tab = activeTab;
     if (!tab) return;
-    const content = view ? view.state.doc.toString() : tab.content;
+    let content = view ? view.state.doc.toString() : tab.content;
+    content = applyLineEnding(content, tab.lineEnding ?? 'LF');
     try {
       const path = await invoke('save_file_dialog', {
         defaultName: tab.title.endsWith('.md') ? tab.title : `${tab.title}.md`,
@@ -264,7 +297,7 @@
     // Restore content to CM on next tick
     const tab = tabs.find(t => t.id === id);
     if (view && tab) {
-      view.setState(buildState(tab.content, isDark));
+      view.setState(buildState(tab.content, isDark, { tabSize: tab.tabSize, indentStyle: tab.indentStyle }));
       updateOutline(tab.content);
     }
   }
@@ -281,7 +314,7 @@
     if (newTabs.length === 0) {
       tabs = [makeTab()];
       activeTabId = tabs[0].id;
-      if (view) view.setState(buildState('', isDark));
+      if (view) view.setState(buildState('', isDark, { tabSize: 4, indentStyle: 'spaces' }));
       outline = [];
       return;
     }
@@ -290,7 +323,7 @@
       const newActive = newTabs[Math.min(idx, newTabs.length - 1)];
       activeTabId = newActive.id;
       if (view) {
-        view.setState(buildState(newActive.content, isDark));
+        view.setState(buildState(newActive.content, isDark, { tabSize: newActive.tabSize, indentStyle: newActive.indentStyle }));
         updateOutline(newActive.content);
       }
     }
@@ -337,7 +370,7 @@
 
     const tab = activeTab;
     view = new EditorView({
-      state: buildState(tab.content, isDark),
+      state: buildState(tab.content, isDark, { tabSize: tab.tabSize, indentStyle: tab.indentStyle }),
       parent: editorEl,
     });
     updateOutline(tab.content);
@@ -354,6 +387,26 @@
     if (!view) return;
     view.dispatch({
       effects: themeCompartment.reconfigure(isDark ? oneDark : EditorView.theme({}, { dark: false })),
+    });
+  });
+
+  // Sync search state to CM when query or options change
+  $effect(() => {
+    if (!view || !searchQuery) { matchCount = 0; return; }
+    view.dispatch({ effects: setSearchQuery.of(buildSearchQuery()) });
+    matchCount = countMatches();
+  });
+
+  // Sync format settings to CM when active tab's format changes
+  $effect(() => {
+    if (!view || !activeTab) return;
+    const t = activeTab.tabSize ?? 4;
+    const s = activeTab.indentStyle ?? 'spaces';
+    view.dispatch({
+      effects: [
+        tabSizeCompartment.reconfigure(EditorState.tabSize.of(t)),
+        indentCompartment.reconfigure(indentUnit.of(s === 'tabs' ? '\t' : ' '.repeat(t))),
+      ],
     });
   });
 
@@ -583,9 +636,8 @@
         {/if}
       </div>
 
-      <!-- Left resize handle — separator role is interactive when focusable (ARIA spec) -->
-      <!-- svelte-ignore a11y_no_noninteractive_tabindex a11y_no_noninteractive_element_interactions -->
-      <div class="resize-handle" onmousedown={startResizeLeft} role="separator" aria-orientation="vertical" tabindex="0"></div>
+      <!-- Left resize handle -->
+      <button type="button" class="resize-handle" onmousedown={startResizeLeft} aria-label="Resize left panel"></button>
     {/if}
 
     <!-- Editor -->
@@ -593,8 +645,8 @@
 
     <!-- Right resize handle -->
     {#if rightOpen}
-      <!-- svelte-ignore a11y_no_noninteractive_tabindex a11y_no_noninteractive_element_interactions -->
-      <div class="resize-handle" onmousedown={startResizeRight} role="separator" aria-orientation="vertical" tabindex="0"></div>
+      <!-- Right resize handle -->
+      <button type="button" class="resize-handle" onmousedown={startResizeRight} aria-label="Resize right panel"></button>
 
       <!-- Right panel: Stats / Format / Search -->
       <div
@@ -648,17 +700,24 @@
             <div>
               <p class="text-xs font-medium mb-2" style="color: var(--text-2);">Line endings</p>
               <div class="space-y-1">
-                {#each ['LF (Unix)', 'CRLF (Windows)', 'CR (Classic Mac)'] as le}
+                {#each [['LF', 'LF (Unix)'], ['CRLF', 'CRLF (Windows)'], ['CR', 'CR (Classic Mac)']] as [val, label]}
                   <label class="flex items-center gap-2 text-xs cursor-pointer">
-                    <input type="radio" name="le" value={le} checked={le === 'LF (Unix)'} class="accent-[var(--accent)]" />
-                    <span style="color: var(--text);">{le}</span>
+                    <input type="radio" name="le" value={val}
+                      checked={activeTab?.lineEnding === val}
+                      onchange={() => { if (activeTab) activeTab.lineEnding = val; }}
+                      class="accent-[var(--accent)]" />
+                    <span style="color: var(--text);">{label}</span>
                   </label>
                 {/each}
               </div>
             </div>
             <div>
               <p class="text-xs font-medium mb-2" style="color: var(--text-2);">Encoding</p>
-              <select class="w-full text-xs rounded px-2 py-1.5 border" style="background: var(--surface); color: var(--text); border-color: var(--border);">
+              <select
+                value={activeTab?.encoding ?? 'UTF-8'}
+                onchange={(e) => { if (activeTab) activeTab.encoding = e.currentTarget.value; }}
+                class="w-full text-xs rounded px-2 py-1.5 border"
+                style="background: var(--surface); color: var(--text); border-color: var(--border);">
                 <option>UTF-8</option>
                 <option>UTF-16</option>
                 <option>ISO-8859-1</option>
@@ -666,38 +725,70 @@
             </div>
             <div>
               <p class="text-xs font-medium mb-2" style="color: var(--text-2);">Tab size</p>
-              <select class="w-full text-xs rounded px-2 py-1.5 border" style="background: var(--surface); color: var(--text); border-color: var(--border);">
-                <option>2 spaces</option>
-                <option>4 spaces</option>
-                <option>Tab character</option>
+              <select
+                value={activeTab?.tabSize ?? 4}
+                onchange={(e) => { if (activeTab) activeTab.tabSize = Number(e.currentTarget.value); }}
+                class="w-full text-xs rounded px-2 py-1.5 border"
+                style="background: var(--surface); color: var(--text); border-color: var(--border);">
+                <option value={2}>2 spaces</option>
+                <option value={4}>4 spaces</option>
               </select>
+            </div>
+            <div>
+              <p class="text-xs font-medium mb-2" style="color: var(--text-2);">Indent style</p>
+              <div class="flex gap-3">
+                {#each [['spaces', 'Spaces'], ['tabs', 'Tabs']] as [val, label]}
+                  <label class="flex items-center gap-2 text-xs cursor-pointer">
+                    <input type="radio" name="indent" value={val}
+                      checked={activeTab?.indentStyle === val}
+                      onchange={() => { if (activeTab) activeTab.indentStyle = val; }}
+                      class="accent-[var(--accent)]" />
+                    <span style="color: var(--text);">{label}</span>
+                  </label>
+                {/each}
+              </div>
             </div>
           </div>
 
         {:else if rightTab === 'search'}
           <!-- Search & Replace -->
           <div class="flex-1 overflow-y-auto p-3 space-y-3">
-            <Input
-              bind:value={searchQuery}
-              label="Find"
-              placeholder="Search…"
-              onkeydown={(e) => e.key === 'Enter' && doSearch()}
-            />
+            <div>
+              <Input
+                bind:value={searchQuery}
+                label="Find"
+                placeholder="Search…"
+                onkeydown={(e) => {
+                  if (e.key === 'Enter') { e.shiftKey ? doFindPrev() : doFindNext(); }
+                  if (e.key === 'Escape') { rightTab = 'stats'; view?.focus(); }
+                }}
+              />
+              {#if searchQuery}
+                <p class="text-xs mt-1.5" style="color: var(--text-3);">
+                  {matchCount} match{matchCount !== 1 ? 'es' : ''}
+                </p>
+              {/if}
+            </div>
             <Input
               bind:value={replaceQuery}
               label="Replace"
               placeholder="Replace with…"
+              onkeydown={(e) => {
+                if (e.key === 'Escape') { rightTab = 'stats'; view?.focus(); }
+              }}
             />
             <label class="flex items-center gap-2 text-xs cursor-pointer">
               <input type="checkbox" bind:checked={searchCaseSensitive} class="accent-[var(--accent)]" />
               <span style="color: var(--text);">Case sensitive</span>
             </label>
             <div class="flex gap-2 pt-1">
-              <button onclick={doSearch} class="action-btn flex-1">Find</button>
-              <button onclick={doReplace} class="action-btn flex-1">Replace</button>
+              <button onclick={doFindPrev} class="action-btn flex-1" title="Previous (Shift+Enter)">↑ Prev</button>
+              <button onclick={doFindNext} class="action-btn flex-1" title="Next (Enter)">Next ↓</button>
             </div>
-            <button onclick={doReplaceAll} class="action-btn w-full">Replace All</button>
-            <p class="text-xs" style="color: var(--text-3);">Tip: use Ctrl+H in the editor for the built-in find/replace.</p>
+            <div class="flex gap-2">
+              <button onclick={doReplace} class="action-btn flex-1">Replace</button>
+              <button onclick={doReplaceAll} class="action-btn flex-1">Replace All</button>
+            </div>
           </div>
         {/if}
       </div>
