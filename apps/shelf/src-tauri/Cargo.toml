@@ -19,4 +19,11 @@ tauri-plugin-global-shortcut = "2"
 serde                     = { workspace = true }
 serde_json                = { workspace = true }
 librewin-common           = { workspace = true, features = ["tags"] }
+zip                       = "2"
+sevenz-rust2              = "0.20"
+tar                       = "0.4"
+flate2                    = "1"
+bzip2                     = "0.4"
+xz2                       = "0.1"
+rfd                       = "0.15"
 

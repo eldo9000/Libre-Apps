@@ -19,7 +19,84 @@
       tagInput: '',
       loading: false,
       error: null,
+      archiveContext: null, // { archivePath, internalDir } when browsing inside an archive
     };
+  }
+
+  // ── Archive helpers ────────────────────────────────────────────────────────
+  const ARCHIVE_EXTS = new Set(['zip', '7z', 'tar', 'gz', 'bz2', 'xz', 'rar', 'tgz', 'tbz2', 'txz']);
+
+  function isArchive(item) {
+    if (!item || item.is_dir) return false;
+    const name = (item.name ?? '').toLowerCase();
+    if (name.endsWith('.tar.gz') || name.endsWith('.tar.bz2') || name.endsWith('.tar.xz')) return true;
+    const ext = (item.extension ?? '').toLowerCase();
+    return ARCHIVE_EXTS.has(ext);
+  }
+
+  // Returns direct children of internalDir from the flat archive listing.
+  // Synthesizes directory entries for implicit dirs (some archivers omit them).
+  function archiveEntriesForDir(entries, internalDir) {
+    const prefix = internalDir ? internalDir + '/' : '';
+    const seen = new Set();
+    const result = [];
+    for (const entry of entries) {
+      if (!entry.path.startsWith(prefix)) continue;
+      const rest = entry.path.slice(prefix.length);
+      if (!rest) continue;
+      const slashIdx = rest.indexOf('/');
+      if (slashIdx === -1) {
+        if (!seen.has(entry.path)) { seen.add(entry.path); result.push(entry); }
+      } else {
+        const dirName = rest.slice(0, slashIdx);
+        const dirKey = prefix + dirName;
+        if (!seen.has(dirKey)) {
+          seen.add(dirKey);
+          result.push({ name: dirName, path: dirKey, is_dir: true, size: null, modified: null, extension: null, tags: [] });
+        }
+      }
+    }
+    // dirs first, then alpha
+    result.sort((a, b) => {
+      if (a.is_dir && !b.is_dir) return -1;
+      if (!a.is_dir && b.is_dir) return 1;
+      return a.name.localeCompare(b.name);
+    });
+    return result;
+  }
+
+  async function enterArchive(archivePath) {
+    const parentDir = archivePath.split('/').slice(0, -1).join('/') || '/';
+    // Push parent dir to history so goBack() exits the archive naturally
+    const pi = activePaneIdx;
+    const p = panes[pi];
+    const tab = p.tabs[p.activeTabIdx];
+    const newHistory = [...tab.history.slice(0, tab.historyIdx + 1), parentDir];
+    panes[pi].tabs[p.activeTabIdx] = {
+      ...tab,
+      history: newHistory,
+      historyIdx: newHistory.length - 1,
+      archiveContext: { archivePath, internalDir: '' },
+      loading: true, error: null,
+      selected: null, selectedItem: null, selectedIndex: -1,
+    };
+    panes = panes;
+    await loadArchiveDir();
+  }
+
+  async function loadArchiveDir() {
+    const pi = activePaneIdx;
+    const ctx = panes[pi].tabs[panes[pi].activeTabIdx].archiveContext;
+    if (!ctx) return;
+    try {
+      const allEntries = await invoke('list_archive', { path: ctx.archivePath });
+      const items = archiveEntriesForDir(allEntries, ctx.internalDir);
+      panes[pi].tabs[panes[pi].activeTabIdx] = { ...panes[pi].tabs[panes[pi].activeTabIdx], items, loading: false };
+      panes = panes;
+    } catch (e) {
+      panes[pi].tabs[panes[pi].activeTabIdx] = { ...panes[pi].tabs[panes[pi].activeTabIdx], error: String(e), loading: false };
+      panes = panes;
+    }
   }
 
   // ── Pane factory ───────────────────────────────────────────────────────────
@@ -184,10 +261,44 @@
     const pi = activePaneIdx;
     const p = panes[pi];
     const tab = p.tabs[p.activeTabIdx];
-    if (tab.historyIdx <= 0) return;
+
+    // Inside an archive: step up one internal dir level first
+    if (tab.archiveContext && tab.archiveContext.internalDir) {
+      const parts = tab.archiveContext.internalDir.split('/');
+      parts.pop();
+      const newInternalDir = parts.join('/');
+      panes[pi].tabs[p.activeTabIdx] = {
+        ...tab,
+        archiveContext: { ...tab.archiveContext, internalDir: newInternalDir },
+        selected: null, selectedItem: null, selectedIndex: -1,
+        loading: true, error: null,
+      };
+      panes = panes;
+      await loadArchiveDir();
+      return;
+    }
+
+    // Exit archive or normal back
+    if (tab.historyIdx <= 0 && !tab.archiveContext) return;
+    if (tab.archiveContext) {
+      // At archive root — exit to filesystem
+      panes[pi].tabs[p.activeTabIdx] = {
+        ...tab,
+        archiveContext: null,
+        selected: null, selectedItem: null, selectedIndex: -1,
+        search: '', tagFilter: null, loading: true, error: null,
+      };
+      panes = panes;
+      const items = await loadDir(tab.history[tab.historyIdx]);
+      panes[pi].tabs[panes[pi].activeTabIdx] = { ...panes[pi].tabs[panes[pi].activeTabIdx], items, loading: false };
+      panes = panes;
+      return;
+    }
+
     const newIdx = tab.historyIdx - 1;
     const path = tab.history[newIdx];
     panes[pi].tabs[p.activeTabIdx] = { ...tab, historyIdx: newIdx, path,
+      archiveContext: null,
       selected: null, selectedItem: null, selectedIndex: -1,
       search: '', tagFilter: null, loading: true };
     panes = panes;
@@ -371,8 +482,93 @@
 
   function onContextMenu(e, item) {
     e.preventDefault();
-    if (item.is_dir) return; // no context menu for folders
-    contextMenu = { x: e.clientX, y: e.clientY, item };
+    if (item.is_dir && !t.archiveContext) return; // no context menu for plain folders
+    if (item.is_dir && t.archiveContext) return; // no context menu for dirs inside archives either
+    contextMenu = { x: e.clientX, y: e.clientY, item, insideArchive: !!t.archiveContext, archiveCtx: t.archiveContext };
+  }
+
+  async function extractHere(item) {
+    hideContextMenu();
+    const parentDir = item.path.split('/').slice(0, -1).join('/') || '/';
+    showToast('Extracting…');
+    try {
+      await invoke('extract_archive', { path: item.path, dest: parentDir });
+      showToast('Extracted');
+      dirCache.delete(parentDir);
+      if (!t.archiveContext) await refreshDir();
+    } catch (e) { showToast(`Extract failed: ${e}`); }
+  }
+
+  async function extractTo(item) {
+    hideContextMenu();
+    const dest = await invoke('pick_directory');
+    if (!dest) return;
+    showToast('Extracting…');
+    try {
+      await invoke('extract_archive', { path: item.path, dest });
+      showToast('Extracted');
+    } catch (e) { showToast(`Extract failed: ${e}`); }
+  }
+
+  async function extractSelectedFromArchive() {
+    const ctx = t.archiveContext;
+    if (!ctx || !t.selectedItem) return;
+    hideContextMenu();
+    const parentDir = ctx.archivePath.split('/').slice(0, -1).join('/') || '/';
+    showToast('Extracting…');
+    try {
+      await invoke('extract_files', { path: ctx.archivePath, files: [t.selectedItem.path], dest: parentDir });
+      showToast('Extracted');
+    } catch (e) { showToast(`Extract failed: ${e}`); }
+  }
+
+  async function extractAllFromArchive(dest) {
+    const ctx = t.archiveContext;
+    if (!ctx) return;
+    hideContextMenu();
+    const target = dest ?? (ctx.archivePath.split('/').slice(0, -1).join('/') || '/');
+    showToast('Extracting…');
+    try {
+      await invoke('extract_archive', { path: ctx.archivePath, dest: target });
+      showToast('Extracted');
+      dirCache.delete(target);
+    } catch (e) {
+      if (String(e).includes('PASSWORD_REQUIRED')) {
+        showPasswordDialog(ctx.archivePath, target);
+      } else {
+        showToast(`Extract failed: ${e}`);
+      }
+    }
+  }
+
+  async function extractAllFromArchiveTo() {
+    const ctx = t.archiveContext;
+    if (!ctx) return;
+    hideContextMenu();
+    const dest = await invoke('pick_directory');
+    if (!dest) return;
+    await extractAllFromArchive(dest);
+  }
+
+  // Password dialog state
+  let passwordDialog = $state(null); // { archivePath, dest }
+  let passwordInput = $state('');
+
+  function showPasswordDialog(archivePath, dest) {
+    passwordDialog = { archivePath, dest };
+    passwordInput = '';
+  }
+
+  async function submitPassword() {
+    if (!passwordDialog) return;
+    const { archivePath, dest } = passwordDialog;
+    passwordDialog = null;
+    showToast('Extracting…');
+    try {
+      await invoke('extract_archive_with_password', { path: archivePath, dest, password: passwordInput });
+      showToast('Extracted');
+      dirCache.delete(dest);
+    } catch (e) { showToast(`Wrong password or extract failed: ${e}`); }
   }
 
   function hideContextMenu() { contextMenu = null; }
@@ -445,8 +641,28 @@
   }
 
   async function openItem(item) {
-    if (item.is_dir) { await navigateTo(item.path); }
-    else { try { await invoke('open_file', { path: item.path }); } catch (e) { console.error(e); } }
+    if (t.archiveContext) {
+      // Inside an archive — navigate deeper into subdirs; files do nothing
+      if (item.is_dir) {
+        const ctx = t.archiveContext;
+        const newInternalDir = ctx.internalDir ? `${ctx.internalDir}/${item.name}` : item.name;
+        updateTab({
+          archiveContext: { ...ctx, internalDir: newInternalDir },
+          selected: null, selectedItem: null, selectedIndex: -1,
+          loading: true, error: null,
+        });
+        await loadArchiveDir();
+        // TODO: nested archive-within-archive browse not supported in M1
+      }
+      return;
+    }
+    if (item.is_dir) {
+      await navigateTo(item.path);
+    } else if (isArchive(item)) {
+      await enterArchive(item.path);
+    } else {
+      try { await invoke('open_file', { path: item.path }); } catch (e) { console.error(e); }
+    }
   }
 
   function getDisplayItems(tab) {
@@ -643,11 +859,32 @@
       {@const pt = paneTabs[paneActiveTabIdx]}
       {@const dispItems = getDisplayItems(pt)}
       {@const breadcrumb = (() => {
-        if (!pt.path) return [{ label: 'Home', path: homeDir }];
+        if (pt.archiveContext) {
+          // Real filesystem crumbs up to the archive file
+          const archivePath = pt.archiveContext.archivePath;
+          const segs = archivePath.split('/').filter(Boolean);
+          const fsCrumbs = [{ label: '/', path: '/', isArchive: false }];
+          let acc = '';
+          for (const seg of segs) { acc += '/' + seg; fsCrumbs.push({ label: seg, path: acc, isArchive: false }); }
+          // Archive root crumb
+          const archiveName = segs[segs.length - 1] ?? 'archive';
+          fsCrumbs[fsCrumbs.length - 1] = { label: archiveName, path: archivePath, isArchive: true };
+          // Internal path segments
+          if (pt.archiveContext.internalDir) {
+            const parts = pt.archiveContext.internalDir.split('/');
+            let iacc = '';
+            for (const part of parts) {
+              iacc = iacc ? `${iacc}/${part}` : part;
+              fsCrumbs.push({ label: part, internalPath: iacc, isArchive: true });
+            }
+          }
+          return fsCrumbs;
+        }
+        if (!pt.path) return [{ label: 'Home', path: homeDir, isArchive: false }];
         const segments = pt.path.split('/').filter(Boolean);
-        const crumbs = [{ label: '/', path: '/' }];
+        const crumbs = [{ label: '/', path: '/', isArchive: false }];
         let acc = '';
-        for (const seg of segments) { acc += '/' + seg; crumbs.push({ label: seg, path: acc }); }
+        for (const seg of segments) { acc += '/' + seg; crumbs.push({ label: seg, path: acc, isArchive: false }); }
         return crumbs;
       })()}
 
@@ -705,14 +942,50 @@
           <div class="flex items-center gap-0.5 ml-1 flex-1 min-w-0 overflow-hidden">
             {#each breadcrumb as crumb, i}
               {#if i > 0}<span class="text-gray-300 dark:text-gray-600 text-xs mx-0.5">›</span>{/if}
-              <button onclick={() => { activePaneIdx = pi; navigateTo(crumb.path); }}
+              <button onclick={() => {
+                activePaneIdx = pi;
+                if (crumb.isArchive && !crumb.internalPath) {
+                  // Go to archive root
+                  const ctx = pt.archiveContext;
+                  if (ctx) {
+                    panes[pi].tabs[panes[pi].activeTabIdx] = { ...panes[pi].tabs[panes[pi].activeTabIdx], archiveContext: { ...ctx, internalDir: '' }, loading: true, error: null, selected: null, selectedItem: null, selectedIndex: -1 };
+                    panes = panes;
+                    loadArchiveDir();
+                  }
+                } else if (crumb.isArchive && crumb.internalPath !== undefined) {
+                  // Navigate to an internal archive dir
+                  const ctx = pt.archiveContext;
+                  if (ctx) {
+                    panes[pi].tabs[panes[pi].activeTabIdx] = { ...panes[pi].tabs[panes[pi].activeTabIdx], archiveContext: { ...ctx, internalDir: crumb.internalPath }, loading: true, error: null, selected: null, selectedItem: null, selectedIndex: -1 };
+                    panes = panes;
+                    loadArchiveDir();
+                  }
+                } else {
+                  // Normal filesystem navigation — clear archiveContext
+                  panes[pi].tabs[panes[pi].activeTabIdx] = { ...panes[pi].tabs[panes[pi].activeTabIdx], archiveContext: null };
+                  panes = panes;
+                  navigateTo(crumb.path);
+                }
+              }}
                 class="text-sm px-1 py-0.5 rounded transition-colors truncate max-w-[120px]
                   {i === breadcrumb.length - 1
-                    ? 'text-gray-800 dark:text-gray-200 font-medium'
-                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800'}"
-              >{crumb.label}</button>
+                    ? crumb.isArchive ? 'text-[var(--accent)] font-medium' : 'text-gray-800 dark:text-gray-200 font-medium'
+                    : crumb.isArchive ? 'text-[var(--accent)]/70 hover:text-[var(--accent)] hover:bg-[var(--accent)]/10' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+              >{#if crumb.isArchive && i > 0}
+                <span class="mr-0.5 opacity-60">⊞</span>{/if}{crumb.label}</button>
             {/each}
           </div>
+
+          {#if pt.archiveContext}
+            <div class="flex items-center gap-1 shrink-0 ml-1">
+              <button onclick={() => { activePaneIdx = pi; extractAllFromArchive(); }}
+                class="px-2 py-0.5 text-[11px] rounded bg-[var(--accent)]/10 text-[var(--accent)] hover:bg-[var(--accent)]/20 transition-colors"
+                title="Extract all to archive's folder">Extract All</button>
+              <button onclick={() => { activePaneIdx = pi; extractAllFromArchiveTo(); }}
+                class="px-2 py-0.5 text-[11px] rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                title="Extract all to a chosen folder">Extract To…</button>
+            </div>
+          {/if}
 
           {#if pt.tagFilter}
             <div class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] text-[11px] shrink-0">
@@ -775,6 +1048,12 @@
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 {pt.selected === item.name ? 'text-white/75' : 'text-[var(--accent)]'}">
                     <path d="M5 4h4l3 3h7a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-11a2 2 0 0 1 2 -2" />
                   </svg>
+                {:else if isArchive(item)}
+                  <!-- Archive file icon -->
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 {pt.selected === item.name ? 'text-white/75' : 'text-amber-500 dark:text-amber-400'}">
+                    <path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2" />
+                    <path d="M12 17v-6" /><path d="M9.5 14.5l2.5 2.5l2.5 -2.5" />
+                  </svg>
                 {:else}
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 {pt.selected === item.name ? 'text-white/60' : 'text-gray-400 dark:text-gray-500'}">
                     <path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2" />
@@ -795,7 +1074,11 @@
 
                 <span class="w-28 text-right text-xs {pt.selected === item.name ? 'text-white/60' : 'text-gray-400 dark:text-gray-500'}">{formatDate(item.modified)}</span>
                 <span class="w-20 text-right text-xs {pt.selected === item.name ? 'text-white/60' : 'text-gray-400 dark:text-gray-500'}">{kindLabel(item)}</span>
-                <span class="w-16 text-right text-xs {pt.selected === item.name ? 'text-white/60' : 'text-gray-400 dark:text-gray-500'}">{item.is_dir ? '—' : formatSize(item.size)}</span>
+                <span class="w-16 text-right text-xs {pt.selected === item.name ? 'text-white/60' : 'text-gray-400 dark:text-gray-500'}">
+                  {#if item.is_dir}—{:else if pt.archiveContext && item.compressed_size != null && item.compressed_size !== item.size}
+                    {formatSize(item.compressed_size)} <span class="opacity-60">→ {formatSize(item.size)}</span>
+                  {:else}{formatSize(item.size)}{/if}
+                </span>
               </div>
             {/each}
           {/if}
@@ -850,53 +1133,90 @@
     onclick={(e) => e.stopPropagation()}
     onkeydown={(e) => { if (e.key === 'Escape') hideContextMenu(); }}>
 
-    <!-- Quick Convert presets (media files only) -->
-    {#each quickConvertPresets(contextMenu.item.extension) as { preset, label }}
-      <button
-        class="w-full text-left px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300
-               hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-        onclick={() => runQuickConvert(contextMenu.item, preset)}
-      >
-        <span class="text-[var(--accent)] font-medium">Quick Convert</span>
-        <span>{label}</span>
-      </button>
-    {/each}
+    <!-- Archive actions: inside an archive -->
+    {#if contextMenu.insideArchive}
+      <button class="w-full text-left px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+        onclick={extractSelectedFromArchive}>Extract Selected Here</button>
+      <button class="w-full text-left px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+        onclick={() => extractAllFromArchive()}>Extract All Here</button>
+      <button class="w-full text-left px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+        onclick={extractAllFromArchiveTo}>Extract All To…</button>
+    {:else}
+      <!-- Archive actions: archive file in filesystem -->
+      {#if isArchive(contextMenu.item)}
+        <button class="w-full text-left px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+          onclick={() => extractHere(contextMenu.item)}>Extract Here</button>
+        <button class="w-full text-left px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+          onclick={() => extractTo(contextMenu.item)}>Extract To…</button>
+        <div class="my-1 border-t border-gray-200 dark:border-gray-600"></div>
+      {/if}
 
-    <!-- Custom Fade presets -->
-    {#each customPresetsFor(contextMenu.item.extension) as cp (cp.id)}
-      <button
-        class="w-full text-left px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300
-               hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-        onclick={() => runFadePreset(contextMenu.item, cp.id)}
-      >
-        <span class="text-[var(--accent)] font-medium">Fade</span>
-        <span>{cp.name}</span>
-      </button>
-    {/each}
+      <!-- Quick Convert presets (media files only) -->
+      {#each quickConvertPresets(contextMenu.item.extension) as { preset, label }}
+        <button
+          class="w-full text-left px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300
+                 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+          onclick={() => runQuickConvert(contextMenu.item, preset)}
+        >
+          <span class="text-[var(--accent)] font-medium">Quick Convert</span>
+          <span>{label}</span>
+        </button>
+      {/each}
 
-    <!-- Separator if both sections present -->
-    {#if (quickConvertPresets(contextMenu.item.extension).length > 0 || customPresetsFor(contextMenu.item.extension).length > 0) && winepathFound}
-      <div class="my-1 border-t border-gray-200 dark:border-gray-600"></div>
+      <!-- Custom Fade presets -->
+      {#each customPresetsFor(contextMenu.item.extension) as cp (cp.id)}
+        <button
+          class="w-full text-left px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300
+                 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+          onclick={() => runFadePreset(contextMenu.item, cp.id)}
+        >
+          <span class="text-[var(--accent)] font-medium">Fade</span>
+          <span>{cp.name}</span>
+        </button>
+      {/each}
+
+      <!-- Separator -->
+      {#if (quickConvertPresets(contextMenu.item.extension).length > 0 || customPresetsFor(contextMenu.item.extension).length > 0) && winepathFound}
+        <div class="my-1 border-t border-gray-200 dark:border-gray-600"></div>
+      {/if}
+
+      <!-- Copy Windows path (Wine) -->
+      {#if winepathFound}
+        <button
+          class="w-full text-left px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300
+                 hover:bg-gray-100 dark:hover:bg-gray-700"
+          onclick={copyWindowsPath}
+        >
+          Copy Windows path
+        </button>
+      {/if}
+
+      <!-- Fallback -->
+      {#if !isArchive(contextMenu.item) && quickConvertPresets(contextMenu.item.extension).length === 0 && customPresetsFor(contextMenu.item.extension).length === 0 && !winepathFound}
+        <button class="w-full text-left px-3 py-1.5 text-xs text-gray-400 cursor-default" disabled>No actions available</button>
+      {/if}
     {/if}
+  </div>
+{/if}
 
-    <!-- Copy Windows path (Wine) -->
-    {#if winepathFound}
-      <button
-        class="w-full text-left px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300
-               hover:bg-gray-100 dark:hover:bg-gray-700"
-        onclick={copyWindowsPath}
-      >
-        Copy Windows path
-      </button>
-    {/if}
-
-    <!-- Fallback if nothing to show -->
-    {#if quickConvertPresets(contextMenu.item.extension).length === 0 && customPresetsFor(contextMenu.item.extension).length === 0 && !winepathFound}
-      <button
-        class="w-full text-left px-3 py-1.5 text-xs text-gray-400 cursor-default"
-        disabled
-      >No actions available</button>
-    {/if}
+{#if passwordDialog}
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl p-5 w-72">
+      <p class="text-sm font-medium text-gray-800 dark:text-gray-200 mb-3">Archive password required</p>
+      <input
+        bind:value={passwordInput}
+        type="password"
+        placeholder="Enter password"
+        class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded px-2.5 py-1.5 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 outline-none focus:border-[var(--accent)] mb-3"
+        onkeydown={(e) => { if (e.key === 'Enter') submitPassword(); if (e.key === 'Escape') passwordDialog = null; }}
+      />
+      <div class="flex justify-end gap-2">
+        <button onclick={() => passwordDialog = null}
+          class="px-3 py-1.5 text-xs rounded text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">Cancel</button>
+        <button onclick={submitPassword}
+          class="px-3 py-1.5 text-xs rounded bg-[var(--accent)] text-white hover:opacity-90 transition-opacity">Extract</button>
+      </div>
+    </div>
   </div>
 {/if}
 
