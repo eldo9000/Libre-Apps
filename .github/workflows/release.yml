@@ -282,10 +282,11 @@ jobs:
       - name: Generate npm SBOMs
         run: |
           for app in shelf stack prism fade ghost; do
+            echo "Installing deps: $app"
+            npm install --prefix "apps/$app" --prefer-offline --no-audit --no-fund 2>/dev/null || true
             echo "Generating npm SBOM: $app"
             npm sbom \
               --prefix "apps/$app" \
-              --package-lock-only \
               --sbom-format cyclonedx \
               --sbom-type application \
               > "sbom/$app.npm.sbom.json"
