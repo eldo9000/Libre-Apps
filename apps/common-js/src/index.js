@@ -19,3 +19,10 @@ export { default as ScrollArea }  from './components/ScrollArea.svelte';
 export { default as TabBar }      from './components/TabBar.svelte';
 export { default as Toast }       from './components/Toast.svelte';
 export { default as Toaster }     from './components/Toaster.svelte';
+
+// Overlays & interaction
+export { default as Dialog }      from './components/Dialog.svelte';
+export { default as Menu }        from './components/Menu.svelte';
+export { default as Tabs }        from './components/Tabs.svelte';
+export { default as Tooltip }     from './components/Tooltip.svelte';
+export { default as Input }       from './components/Input.svelte';

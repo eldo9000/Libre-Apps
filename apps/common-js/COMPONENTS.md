@@ -169,6 +169,156 @@ anywhere via a `bind:this` reference.
 
 ---
 
+## Overlays & interaction
+
+### `Dialog`
+
+Modal dialog with backdrop, focus trap, and escape-to-close.
+
+```svelte
+<script>
+  let showDialog = false;
+</script>
+
+<Button onclick={() => showDialog = true}>Open</Button>
+
+<Dialog bind:open={showDialog} title="Confirm Delete" onclose={() => showDialog = false}>
+  <p>Are you sure you want to delete this file?</p>
+  {#snippet footer()}
+    <Button variant="secondary" onclick={() => showDialog = false}>Cancel</Button>
+    <Button onclick={handleDelete}>Delete</Button>
+  {/snippet}
+</Dialog>
+```
+
+**Props:**
+- `open` — bindable boolean
+- `title` — dialog heading string
+- `size` — `'sm' | 'md' | 'lg'`. Default: `'md'`
+- `onclose` — callback fired on close
+
+**Slots:** `children` (body), `footer` (snippet — action buttons)
+
+**Keyboard:** `Esc` closes; `Tab` traps focus inside the panel.
+
+---
+
+### `Menu`
+
+Dropdown / context menu anchored to a trigger element.
+
+```svelte
+<script>
+  let menuOpen = false;
+  let btnEl;
+
+  const items = [
+    { label: 'Rename',  onclick: rename },
+    { label: 'Duplicate', onclick: duplicate },
+    { separator: true },
+    { label: 'Delete',  onclick: deleteItem, disabled: !canDelete },
+  ];
+</script>
+
+<button bind:this={btnEl} onclick={() => menuOpen = !menuOpen}>Options</button>
+<Menu bind:open={menuOpen} anchor={btnEl} {items} />
+```
+
+**Props:**
+- `open` — bindable boolean
+- `anchor` — `HTMLElement | null`. Menu positions below this element.
+- `x` / `y` — fixed position (px) when `anchor` is null
+- `items` — `{ label, icon?, onclick, disabled?, separator? }[]`
+
+**Keyboard:** `ArrowDown/Up` navigate; `Enter/Space` activate; `Esc` closes; `Home/End` jump to first/last.
+
+---
+
+### `Tabs`
+
+Tabbed container — wraps `TabBar` with associated content panels.
+
+```svelte
+<script>
+  let active = 'editor';
+</script>
+
+<Tabs bind:activeTab={active} tabs={[
+  { id: 'editor',  label: 'Editor',  panel: editorPanel  },
+  { id: 'preview', label: 'Preview', panel: previewPanel },
+]} />
+
+{#snippet editorPanel()}  <CodeMirrorEditor /> {/snippet}
+{#snippet previewPanel()} <MarkdownPreview /> {/snippet}
+```
+
+**Props:**
+- `tabs` — `{ id: string, label: string, panel: Snippet }[]`
+- `activeTab` — bindable string (id of active tab)
+- `orientation` — `'horizontal' | 'vertical'`. Default: `'horizontal'`
+- `class` — extra classes on container
+
+**Note:** Uses `TabBar` internally for the horizontal case. Vertical mode renders its own tab list with `ArrowUp/Down` navigation.
+
+---
+
+### `Tooltip`
+
+Hover/focus tooltip wrapping any single child element.
+
+```svelte
+<Tooltip content="Save file (Ctrl+S)">
+  <Button onclick={save}>Save</Button>
+</Tooltip>
+
+<Tooltip content="Open settings" placement="bottom" delay={200}>
+  <IconButton label="Settings" onclick={openSettings}>
+    <svg .../>
+  </IconButton>
+</Tooltip>
+```
+
+**Props:**
+- `content` — tooltip text string
+- `placement` — `'top' | 'bottom' | 'left' | 'right'`. Default: `'top'`
+- `delay` — ms before appearing. Default: `500`
+
+**Accessibility:** Injects `aria-describedby` on the trigger; tooltip uses `role="tooltip"`.
+
+---
+
+### `Input`
+
+Labeled text input with error state and optional leading icon.
+
+```svelte
+<!-- Basic -->
+<Input bind:value={name} label="Display name" placeholder="Jane Doe" />
+
+<!-- With validation error -->
+<Input bind:value={email} label="Email" type="email" error={emailError} />
+
+<!-- With leading icon -->
+<Input bind:value={query} label="Search" placeholder="Search files...">
+  {#snippet icon()}
+    <svg width="14" height="14" .../>
+  {/snippet}
+</Input>
+```
+
+**Props:**
+- `value` — bindable string
+- `label` — visible label (also used for screen readers)
+- `placeholder` — input placeholder text
+- `type` — HTML input type. Default: `'text'`
+- `error` — error message string; sets `aria-invalid` and renders error text
+- `disabled` — boolean. Default: `false`
+- `icon` — Snippet. Optional leading icon inside the input field.
+- `id` — explicit element id (auto-generated if omitted)
+- `onchange` / `oninput` — event handlers
+
+---
+
 ## Actions
 
 ### `Button`
