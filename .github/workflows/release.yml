@@ -38,7 +38,8 @@ jobs:
             librsvg2-dev \
             libglib2.0-dev \
             libsoup-3.0-dev \
-            libjavascriptcoregtk-4.1-dev
+            libjavascriptcoregtk-4.1-dev \
+            minisign
 
       - name: Set up Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -73,11 +74,30 @@ jobs:
           cp "$BINARY" "${{ matrix.app }}-x86_64"
           ls -lh "${{ matrix.app }}-x86_64"
 
+      - name: Sign binary
+        env:
+          MINISIGN_KEY_PROD: ${{ secrets.MINISIGN_KEY }}
+          MINISIGN_KEY_DEV: ${{ secrets.MINISIGN_KEY_DEV }}
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            KEY="$MINISIGN_KEY_PROD"
+            COMMENT="librewin-releases $GITHUB_REF_NAME ${{ matrix.app }}-x86_64"
+          else
+            KEY="$MINISIGN_KEY_DEV"
+            COMMENT="librewin-dev $GITHUB_SHA ${{ matrix.app }}-x86_64"
+          fi
+          echo "$KEY" > /tmp/minisign.key
+          minisign -Sm "${{ matrix.app }}-x86_64" -s /tmp/minisign.key -t "$COMMENT"
+          rm -f /tmp/minisign.key
+          echo "Signed: ${{ matrix.app }}-x86_64.minisig"
+
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.app }}-x86_64
-          path: ${{ matrix.app }}-x86_64
+          path: |
+            ${{ matrix.app }}-x86_64
+            ${{ matrix.app }}-x86_64.minisig
           retention-days: 1
 
   # ── aarch64 build ────────────────────────────────────────────────────────
@@ -106,7 +126,8 @@ jobs:
             librsvg2-dev \
             libglib2.0-dev \
             libsoup-3.0-dev \
-            libjavascriptcoregtk-4.1-dev
+            libjavascriptcoregtk-4.1-dev \
+            minisign
 
       - name: Set up Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -141,14 +162,33 @@ jobs:
           cp "$BINARY" "${{ matrix.app }}-aarch64"
           ls -lh "${{ matrix.app }}-aarch64"
 
+      - name: Sign binary
+        env:
+          MINISIGN_KEY_PROD: ${{ secrets.MINISIGN_KEY }}
+          MINISIGN_KEY_DEV: ${{ secrets.MINISIGN_KEY_DEV }}
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            KEY="$MINISIGN_KEY_PROD"
+            COMMENT="librewin-releases $GITHUB_REF_NAME ${{ matrix.app }}-aarch64"
+          else
+            KEY="$MINISIGN_KEY_DEV"
+            COMMENT="librewin-dev $GITHUB_SHA ${{ matrix.app }}-aarch64"
+          fi
+          echo "$KEY" > /tmp/minisign.key
+          minisign -Sm "${{ matrix.app }}-aarch64" -s /tmp/minisign.key -t "$COMMENT"
+          rm -f /tmp/minisign.key
+          echo "Signed: ${{ matrix.app }}-aarch64.minisig"
+
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.app }}-aarch64
-          path: ${{ matrix.app }}-aarch64
+          path: |
+            ${{ matrix.app }}-aarch64
+            ${{ matrix.app }}-aarch64.minisig
           retention-days: 1
 
-  # ── Collect .desktop files (arch-independent, fetched from source) ─────────
+  # ── Collect and sign .desktop files ──────────────────────────────────────
   collect-desktop-files:
     name: Collect .desktop files
     runs-on: ubuntu-latest
@@ -157,6 +197,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Install minisign
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends minisign
 
       - name: Bundle .desktop files
         run: |
@@ -172,6 +217,21 @@ jobs:
           done
           ls -lh desktop-files/
 
+      - name: Sign .desktop files
+        env:
+          MINISIGN_KEY_PROD: ${{ secrets.MINISIGN_KEY }}
+        run: |
+          echo "$MINISIGN_KEY_PROD" > /tmp/minisign.key
+          for desktop in desktop-files/*.desktop; do
+            [[ -f "$desktop" ]] || continue
+            NAME=$(basename "$desktop")
+            COMMENT="librewin-releases $GITHUB_REF_NAME $NAME"
+            minisign -Sm "$desktop" -s /tmp/minisign.key -t "$COMMENT"
+            echo "Signed: $NAME.minisig"
+          done
+          rm -f /tmp/minisign.key
+          ls -lh desktop-files/
+
       - name: Upload .desktop files artifact
         uses: actions/upload-artifact@v7
         with:
@@ -179,10 +239,184 @@ jobs:
           path: desktop-files/
           retention-days: 1
 
+  # ── Generate and sign SBOMs ──────────────────────────────────────────────
+  generate-sbom:
+    name: Generate SBOMs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install minisign
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends minisign
+
+      - name: Set up Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          cache-workspaces: apps
+
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@main
+
+      - name: Install cargo-sbom
+        run: cargo binstall cargo-sbom --no-confirm
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Generate Rust SBOMs
+        run: |
+          mkdir -p sbom
+          cd apps
+          for app in shelf stack prism fade ghost; do
+            echo "Generating Rust SBOM: $app"
+            cargo sbom --cargo-package "$app" > "../sbom/$app.rust.sbom.json"
+          done
+
+      - name: Generate npm SBOMs
+        run: |
+          for app in shelf stack prism fade ghost; do
+            echo "Generating npm SBOM: $app"
+            npm sbom \
+              --prefix "apps/$app" \
+              --package-lock-only \
+              --sbom-format cyclonedx \
+              --sbom-type application \
+              > "sbom/$app.npm.sbom.json"
+          done
+
+      - name: Sign SBOMs
+        env:
+          MINISIGN_KEY_PROD: ${{ secrets.MINISIGN_KEY }}
+          MINISIGN_KEY_DEV: ${{ secrets.MINISIGN_KEY_DEV }}
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            KEY="$MINISIGN_KEY_PROD"
+          else
+            KEY="$MINISIGN_KEY_DEV"
+          fi
+          echo "$KEY" > /tmp/minisign.key
+          for sbom in sbom/*.sbom.json; do
+            [[ -f "$sbom" ]] || continue
+            NAME=$(basename "$sbom")
+            COMMENT="librewin-releases $GITHUB_REF_NAME $NAME"
+            minisign -Sm "$sbom" -s /tmp/minisign.key -t "$COMMENT"
+            echo "Signed: $NAME.minisig"
+          done
+          rm -f /tmp/minisign.key
+          ls -lh sbom/
+
+      - name: Upload SBOMs artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: sbom
+          path: sbom/
+          retention-days: 1
+
+  # ── Generate, stamp, and sign manifests ──────────────────────────────────
+  generate-manifests:
+    name: Generate manifests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install minisign
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends minisign
+
+      - name: Stamp and validate manifests
+        run: |
+          python3 - <<'PYEOF'
+          import json, sys, os, datetime
+
+          apps = ['shelf', 'stack', 'prism', 'fade', 'ghost']
+          git_ref  = os.environ.get('GITHUB_REF_NAME', 'unknown')
+          git_sha  = os.environ.get('GITHUB_SHA', 'unknown')[:8]
+          build_date = datetime.date.today().isoformat()
+          errors = []
+
+          os.makedirs('manifests', exist_ok=True)
+
+          for app in apps:
+              manifest_path = f'apps/{app}/libre.manifest.json'
+              tauri_path    = f'apps/{app}/src-tauri/tauri.conf.json'
+
+              with open(manifest_path) as f:
+                  manifest = json.load(f)
+              with open(tauri_path) as f:
+                  tauri = json.load(f)
+
+              tauri_ver = tauri.get('version', '')
+              tauri_id  = tauri.get('identifier', '')
+
+              if manifest.get('version') != tauri_ver:
+                  errors.append(f'{app}: manifest version {manifest["version"]!r} != tauri version {tauri_ver!r}')
+              if manifest.get('id') != tauri_id:
+                  errors.append(f'{app}: manifest id {manifest["id"]!r} != tauri identifier {tauri_id!r}')
+              if manifest.get('schema_version') != 1:
+                  errors.append(f'{app}: schema_version must be 1')
+
+              if errors:
+                  continue
+
+              manifest['build'] = {
+                  'ref':  git_ref,
+                  'sha':  git_sha,
+                  'date': build_date,
+              }
+
+              out = f'manifests/{app}.manifest.json'
+              with open(out, 'w') as f:
+                  json.dump(manifest, f, indent=2)
+              print(f'Generated: {out}')
+
+          if errors:
+              for e in errors:
+                  print(f'ERROR: {e}', file=sys.stderr)
+              sys.exit(1)
+          PYEOF
+
+      - name: Sign manifests
+        env:
+          MINISIGN_KEY_PROD: ${{ secrets.MINISIGN_KEY }}
+          MINISIGN_KEY_DEV: ${{ secrets.MINISIGN_KEY_DEV }}
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            KEY="$MINISIGN_KEY_PROD"
+          else
+            KEY="$MINISIGN_KEY_DEV"
+          fi
+          echo "$KEY" > /tmp/minisign.key
+          for manifest in manifests/*.manifest.json; do
+            [[ -f "$manifest" ]] || continue
+            NAME=$(basename "$manifest")
+            COMMENT="librewin-releases $GITHUB_REF_NAME $NAME"
+            minisign -Sm "$manifest" -s /tmp/minisign.key -t "$COMMENT"
+            echo "Signed: $NAME.minisig"
+          done
+          rm -f /tmp/minisign.key
+          ls -lh manifests/
+
+      - name: Upload manifests artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: manifests
+          path: manifests/
+          retention-days: 1
+
   # ── Publish GitHub Release ────────────────────────────────────────────────
   release:
     name: Publish Release
-    needs: [build-x86_64, build-aarch64, collect-desktop-files]
+    needs: [build-x86_64, build-aarch64, collect-desktop-files, generate-manifests, generate-sbom]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
 
@@ -199,7 +433,7 @@ jobs:
       - name: List artifacts
         run: find dist/ -type f | sort
 
-      - name: Create GitHub Release and upload binaries
+      - name: Create GitHub Release and upload artifacts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -209,30 +443,45 @@ jobs:
           gh release create "$TAG" \
             --repo "$GITHUB_REPOSITORY" \
             --title "The Freedom Apps $TAG" \
-            --notes "Built from tag $TAG. Binaries for x86_64 and aarch64, plus .desktop files — consumed by the LibreWin OS build system via \`build/fetch-apps.sh\`." \
+            --notes "Built from tag $TAG. Binaries for x86_64 and aarch64, plus .desktop files — consumed by the LibreWin OS build system via \`build/fetch-apps.sh\`. All artifacts are signed with minisign; see the Verifying Releases section in the README." \
             --verify-tag
 
-          # Upload binaries
+          # Upload binaries and their signatures
           for artifact_dir in dist/*/; do
             ARTIFACT_NAME=$(basename "$artifact_dir")
             [[ "$ARTIFACT_NAME" == "desktop-files" ]] && continue
-            BINARY="$artifact_dir/$ARTIFACT_NAME"
-            if [[ -f "$BINARY" ]]; then
-              echo "Uploading binary: $ARTIFACT_NAME"
-              gh release upload "$TAG" "$BINARY" \
+            for f in "$artifact_dir"*; do
+              [[ -f "$f" ]] || continue
+              echo "Uploading: $(basename $f)"
+              gh release upload "$TAG" "$f" \
                 --repo "$GITHUB_REPOSITORY" \
                 --clobber
-            else
-              echo "WARNING: Expected $BINARY but not found"
-              ls "$artifact_dir" || true
-            fi
+            done
           done
 
-          # Upload .desktop files
-          for desktop in dist/desktop-files/*.desktop; do
-            [[ -f "$desktop" ]] || continue
-            echo "Uploading desktop: $(basename $desktop)"
-            gh release upload "$TAG" "$desktop" \
+          # Upload .desktop files and their signatures
+          for f in dist/desktop-files/*; do
+            [[ -f "$f" ]] || continue
+            echo "Uploading: $(basename $f)"
+            gh release upload "$TAG" "$f" \
+              --repo "$GITHUB_REPOSITORY" \
+              --clobber
+          done
+
+          # Upload manifests and their signatures
+          for f in dist/manifests/*; do
+            [[ -f "$f" ]] || continue
+            echo "Uploading: $(basename $f)"
+            gh release upload "$TAG" "$f" \
+              --repo "$GITHUB_REPOSITORY" \
+              --clobber
+          done
+
+          # Upload SBOMs and their signatures
+          for f in dist/sbom/*; do
+            [[ -f "$f" ]] || continue
+            echo "Uploading: $(basename $f)"
+            gh release upload "$TAG" "$f" \
               --repo "$GITHUB_REPOSITORY" \
               --clobber
           done

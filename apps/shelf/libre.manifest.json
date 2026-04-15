@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "id": "io.librewin.shelf",
+  "name": "Shelf",
+  "version": "0.1.0",
+  "description": "LibreWin file manager — tags, dual-pane, keyboard-driven",
+  "permissions": {
+    "filesystem": {
+      "read": true,
+      "write": true,
+      "scope": ["$ALL"]
+    },
+    "network": {
+      "outbound": false,
+      "inbound": false
+    },
+    "subprocess": ["wine", "winepath", "xdg-open"],
+    "webview": false,
+    "notifications": false,
+    "xattr": true
+  },
+  "runtime_deps": ["xdg-utils"]
+}

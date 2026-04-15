@@ -43,6 +43,24 @@ npm run tauri dev
 
 Requires: Rust 1.77+, Node 22+.
 
+## Verifying releases
+
+All release binaries and `.desktop` files are signed with [minisign](https://jedisct1.github.io/minisign/).
+
+**Production public key** (baked into LibreWin OS):
+```
+RWSvBX8a5MExBbOsCmBqDLxNBb8ofBef1k3eqI79Z/LSGp/DBj1YwW5S
+```
+
+```bash
+# Install minisign, then:
+minisign -Vm shelf-x86_64 -P RWSvBX8a5MExBbOsCmBqDLxNBb8ofBef1k3eqI79Z/LSGp/DBj1YwW5S
+```
+
+Each release includes `{app}-{arch}.minisig` files alongside every binary and `.desktop` file.
+See [docs/specs/SIGNING.md](docs/specs/SIGNING.md) for the full signing infrastructure and key
+rotation policy.
+
 ## License
 
 GPL-3.0 — see [LICENSE](LICENSE).

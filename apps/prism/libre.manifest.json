@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "id": "io.librewin.prism",
+  "name": "Prism",
+  "version": "0.1.0",
+  "description": "View images, video, audio, PDFs, and 3D models",
+  "permissions": {
+    "filesystem": {
+      "read": true,
+      "write": false,
+      "scope": ["$ALL"]
+    },
+    "network": {
+      "outbound": false,
+      "inbound": false
+    },
+    "subprocess": [],
+    "webview": false,
+    "notifications": false,
+    "xattr": false
+  },
+  "runtime_deps": []
+}

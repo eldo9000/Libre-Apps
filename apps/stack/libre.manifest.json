@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "id": "io.librewin.stack",
+  "name": "Stack",
+  "version": "0.1.0",
+  "description": "Minimal markdown-first text editor",
+  "permissions": {
+    "filesystem": {
+      "read": true,
+      "write": true,
+      "scope": ["$HOME"]
+    },
+    "network": {
+      "outbound": false,
+      "inbound": false
+    },
+    "subprocess": [],
+    "webview": false,
+    "notifications": false,
+    "xattr": false
+  },
+  "runtime_deps": []
+}
