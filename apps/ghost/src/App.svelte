@@ -7,14 +7,30 @@
 
   let urlInput = $state('');
   let downloadToast = $state(null); // { filename: string } | null
+  let privacyStats = $state({ trackers_blocked: 0, cookies_blocked: 0 });
+  let trackerBlockingEnabled = $state(true);
 
   onMount(async () => {
     const unlistenDownload = listen('download-complete', ({ payload }) => {
       downloadToast = { filename: payload };
       setTimeout(() => { downloadToast = null; }, 4000);
     });
+
+    // Clear any residual storage from this webview context
+    invoke('clear_browsing_data').catch(() => {});
+
+    // Load stats accumulated during previous browsing in this session
+    try {
+      privacyStats = await invoke('get_privacy_stats');
+    } catch { /* no-op — backend may not be ready yet */ }
+
     return () => { unlistenDownload.then(f => f()); };
   });
+
+  async function toggleTrackerBlocking() {
+    trackerBlockingEnabled = !trackerBlockingEnabled;
+    await invoke('set_tracker_blocking', { enabled: trackerBlockingEnabled });
+  }
 
   function navigate() {
     let url = urlInput.trim();
@@ -40,8 +56,6 @@
     await invoke('launch_app', { app });
     await invoke('close_window');
   }
-
-
 </script>
 
 <WindowFrame>
@@ -118,6 +132,13 @@
         <div class="text-xs text-[var(--text-secondary)] leading-tight">No trace. Ever.</div>
       </div>
     </div>
+
+    <!-- Privacy stats bar (only when something to show) -->
+    {#if privacyStats.trackers_blocked > 0}
+      <div class="flex items-center gap-3 text-[12px] text-[var(--text-secondary)]">
+        <span>🛡 {privacyStats.trackers_blocked} tracker{privacyStats.trackers_blocked !== 1 ? 's' : ''} blocked this session</span>
+      </div>
+    {/if}
 
     <!-- Search bar -->
     <div class="flex gap-2 w-full max-w-md px-4">
@@ -200,6 +221,20 @@
       </div>
 
     </div>
+
+    <!-- Tracker blocking toggle -->
+    <div class="flex items-center gap-2 text-[11px] text-[var(--text-secondary)]">
+      <label class="flex items-center gap-1.5 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={trackerBlockingEnabled}
+          onchange={toggleTrackerBlocking}
+          class="accent-[var(--accent)] w-3.5 h-3.5"
+        />
+        <span>Tracker blocking</span>
+      </label>
+    </div>
+
   </div>
 
   <!-- Download toast -->

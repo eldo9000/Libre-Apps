@@ -19,3 +19,6 @@ serde           = { workspace = true }
 serde_json      = { workspace = true }
 librewin-common = { workspace = true }
 
+[target.'cfg(target_os = "linux")'.dependencies]
+webkit2gtk = { version = "2", features = ["v2_40"] }
+
