@@ -30,33 +30,33 @@
   // ── Global state ───────────────────────────────────────────────────────────
   let homeDir = '';
   let volumes = [];
-  let sidebarTab = 'quick';
+  let sidebarTab = $state('quick');
   let { dualPane = $bindable(false) } = $props();
-  let panes = [makePaneState(), makePaneState()];
-  let activePaneIdx = 0;
+  let panes = $state([makePaneState(), makePaneState()]);
+  let activePaneIdx = $state(0);
 
   // Folder tree (shared across panes)
   let treeRoots = [];
-  let treeExpanded = new Set();
+  let treeExpanded = $state(new Set());
   let treeChildren = {};
 
   // Tag save state
-  let tagSaving = false;
-  let tagError = null;
+  let tagSaving = $state(false);
+  let tagError = $state(null);
 
   // File list element refs per pane
   let fileListEls = [];
 
   // Context menu
-  let contextMenu = null;
-  let winepathFound = false;
+  let contextMenu = $state(null);
+  let winepathFound = $state(false);
   let wineprefixReady = false;
 
   // Custom Fade presets
   let customPresets = [];
 
   // Toast
-  let toast = null;
+  let toast = $state(null);
   let toastTimer = null;
 
   // ── Active pane/tab shorthands ─────────────────────────────────────────────
@@ -142,7 +142,7 @@
     }
 
     // Load custom Fade presets (best-effort — Fade may not be installed yet)
-    try { customPresets = await invoke('list_fade_presets'); } catch (_) {}
+    try { customPresets = await invoke('list_fade_presets'); } catch { /* no-op */ }
 
     // Quick Convert result notifications
     quickConvertUnlisten = await listen('quick-convert-done', ({ payload }) => {
@@ -521,14 +521,13 @@
   <div class="flex flex-1 min-h-0">
 
     <!-- ── Sidebar ────────────────────────────────────────────────────────── -->
-    <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
     <div class="sidebar-nav w-48 bg-gray-50 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col shrink-0 outline-none"
       tabindex="-1">
 
       <!-- Sidebar tabs -->
       <div class="flex border-b border-gray-200 dark:border-gray-700 px-1 pt-1.5 gap-0.5 shrink-0">
         {#each [['quick','Quick'],['folders','Folders'],['tags','Tags']] as [id, label]}
-          <button on:click={() => sidebarTab = id}
+          <button onclick={() => sidebarTab = id}
             class="flex-1 text-[11px] py-1 rounded-t font-medium transition-colors
               {sidebarTab === id
                 ? 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 border border-b-white dark:border-gray-700 dark:border-b-gray-900 -mb-px'
@@ -544,7 +543,7 @@
             <div class="w-full px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">{group.group}</div>
             {#each group.items as item}
               {@const active = t.path === item.path}
-              <button on:click={() => item.path && navigateTo(item.path)} disabled={!item.path}
+              <button onclick={() => item.path && navigateTo(item.path)} disabled={!item.path}
                 class="w-full flex items-center gap-2 px-4 py-1.5 transition-colors text-left disabled:opacity-40 text-sm
                   {active ? 'bg-[var(--accent)] text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}">
                 <span class="shrink-0 {active ? 'text-white/75' : 'text-gray-400 dark:text-gray-500'}">
@@ -580,15 +579,13 @@
             <div class="flex items-center gap-0.5 pr-2 py-1 cursor-pointer transition-colors
               {active ? 'bg-[var(--accent)]' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}"
               style="padding-left: {8 + node.depth * 14}px;">
-              <button on:click|stopPropagation={() => toggleTreeExpand(node)}
+              <button onclick={(e) => { e.stopPropagation(); toggleTreeExpand(node); }}
                 class="w-4 h-4 flex items-center justify-center shrink-0 {active ? 'text-white/60' : 'text-gray-400 dark:text-gray-600'}">
                 <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                   {#if treeExpanded.has(node.path)}<path d="M6 9l6 6 6-6"/>{:else}<path d="M9 18l6-6-6-6"/>{/if}
                 </svg>
               </button>
-              <!-- svelte-ignore a11y-click-events-have-key-events -->
-              <!-- svelte-ignore a11y-no-static-element-interactions -->
-              <div on:click={() => navigateTo(node.path)} class="flex items-center gap-1.5 flex-1 min-w-0">
+              <div onclick={() => navigateTo(node.path)} class="flex items-center gap-1.5 flex-1 min-w-0" role="button" tabindex="0" onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigateTo(node.path); }}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
                   class="{active ? 'text-white/75' : 'text-gray-400 dark:text-gray-500'} shrink-0">
                   <path d="M5 4h4l3 3h7a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-11a2 2 0 0 1 2 -2" />
@@ -603,7 +600,7 @@
       {:else}
         <div class="flex-1 overflow-y-auto py-2 px-2">
           {#if t.tagFilter}
-            <button on:click={() => updateTab({ tagFilter: null })}
+            <button onclick={() => updateTab({ tagFilter: null })}
               class="w-full flex items-center gap-1.5 mb-2 px-2 py-1 text-xs rounded bg-[var(--accent)]/10 text-[var(--accent)] hover:bg-[var(--accent)]/20 transition-colors">
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
               Clear: <strong class="ml-0.5">{t.tagFilter}</strong>
@@ -612,7 +609,7 @@
 
           <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 px-1 mb-1.5">Colors</p>
           {#each DEFAULT_TAGS as dt}
-            <button on:click={() => updateTab({ tagFilter: t.tagFilter === dt.name ? null : dt.name })}
+            <button onclick={() => updateTab({ tagFilter: t.tagFilter === dt.name ? null : dt.name })}
               class="w-full flex items-center gap-2 px-2 py-1.5 rounded mb-0.5 text-left transition-colors
                 {t.tagFilter === dt.name ? 'bg-[var(--accent)]/10' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}">
               <span class="w-2.5 h-2.5 rounded-full shrink-0 {dt.color}"></span>
@@ -626,7 +623,7 @@
           {#if allDirTags.filter(d => !TAG_COLOR_OVERRIDES[d.tag]).length > 0}
             <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 px-1 mt-3 mb-1.5">In this folder</p>
             {#each allDirTags.filter(d => !TAG_COLOR_OVERRIDES[d.tag]) as { tag, count }}
-              <button on:click={() => updateTab({ tagFilter: t.tagFilter === tag ? null : tag })}
+              <button onclick={() => updateTab({ tagFilter: t.tagFilter === tag ? null : tag })}
                 class="w-full flex items-center gap-2 px-2 py-1.5 rounded mb-0.5 text-left transition-colors
                   {t.tagFilter === tag ? 'bg-[var(--accent)]/10' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}">
                 <span class="w-2.5 h-2.5 rounded-full shrink-0 {tagColor(tag)}"></span>
@@ -654,16 +651,18 @@
         return crumbs;
       })()}
 
-      <!-- svelte-ignore a11y-no-static-element-interactions -->
-      <div class="flex-1 flex flex-col min-w-0 {dualPane && pi === 0 ? 'border-r border-gray-200 dark:border-gray-700' : ''} {activePaneIdx === pi && dualPane ? 'ring-1 ring-inset ring-[var(--accent)]/30' : ''}"
-        on:mousedown={() => { activePaneIdx = pi; }}>
+      <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+      <div role="region" aria-label="File pane"
+        class="flex-1 flex flex-col min-w-0 {dualPane && pi === 0 ? 'border-r border-gray-200 dark:border-gray-700' : ''} {activePaneIdx === pi && dualPane ? 'ring-1 ring-inset ring-[var(--accent)]/30' : ''}"
+        onmousedown={() => { activePaneIdx = pi; }}>
 
         <!-- Pane tab bar -->
         <div class="flex items-center bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-1.5 pt-1 gap-0.5 shrink-0 overflow-x-auto">
           {#each paneTabs as tab, i}
-            <!-- svelte-ignore a11y-click-events-have-key-events -->
-            <!-- svelte-ignore a11y-no-static-element-interactions -->
-            <div on:click={() => switchPaneTab(pi, i)}
+            <div onclick={() => switchPaneTab(pi, i)}
+              role="tab"
+              tabindex="0"
+              onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') switchPaneTab(pi, i); }}
               class="flex items-center gap-1.5 px-3 py-1.5 rounded-t text-sm cursor-pointer transition-colors shrink-0 max-w-[160px]
                 {i === paneActiveTabIdx
                   ? 'bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 border border-b-white dark:border-gray-700 dark:border-b-gray-900 -mb-px'
@@ -674,7 +673,7 @@
               </svg>
               <span class="truncate">{tabLabel(tab)}</span>
               {#if paneTabs.length > 1}
-                <button on:click={e => { e.stopPropagation(); activePaneIdx = pi; closeTab(i, e); }}
+                <button onclick={(e) => { e.stopPropagation(); activePaneIdx = pi; closeTab(i, e); }}
                   aria-label="Close tab"
                   class="ml-0.5 w-3.5 h-3.5 flex items-center justify-center rounded-full shrink-0
                     hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
@@ -683,7 +682,7 @@
               {/if}
             </div>
           {/each}
-          <button on:click={() => { activePaneIdx = pi; newTab(); }}
+          <button onclick={() => { activePaneIdx = pi; newTab(); }}
             class="flex items-center justify-center w-6 h-6 mb-0.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shrink-0"
             aria-label="New tab">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
@@ -692,12 +691,12 @@
 
         <!-- Toolbar -->
         <div class="flex items-center gap-1 px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shrink-0">
-          <button on:click={() => { activePaneIdx = pi; goBack(); }} disabled={pt.historyIdx === 0}
+          <button onclick={() => { activePaneIdx = pi; goBack(); }} disabled={pt.historyIdx === 0}
             aria-label="Go back"
             class="p-1 rounded transition-colors {pt.historyIdx > 0 ? 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800' : 'text-gray-300 dark:text-gray-700 cursor-default'}">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
-          <button on:click={() => { activePaneIdx = pi; goForward(); }} disabled={pt.historyIdx >= pt.history.length - 1}
+          <button onclick={() => { activePaneIdx = pi; goForward(); }} disabled={pt.historyIdx >= pt.history.length - 1}
             aria-label="Go forward"
             class="p-1 rounded transition-colors {pt.historyIdx < pt.history.length - 1 ? 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800' : 'text-gray-300 dark:text-gray-700 cursor-default'}">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
@@ -706,7 +705,7 @@
           <div class="flex items-center gap-0.5 ml-1 flex-1 min-w-0 overflow-hidden">
             {#each breadcrumb as crumb, i}
               {#if i > 0}<span class="text-gray-300 dark:text-gray-600 text-xs mx-0.5">›</span>{/if}
-              <button on:click={() => { activePaneIdx = pi; navigateTo(crumb.path); }}
+              <button onclick={() => { activePaneIdx = pi; navigateTo(crumb.path); }}
                 class="text-sm px-1 py-0.5 rounded transition-colors truncate max-w-[120px]
                   {i === breadcrumb.length - 1
                     ? 'text-gray-800 dark:text-gray-200 font-medium'
@@ -719,7 +718,7 @@
             <div class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] text-[11px] shrink-0">
               <span class="w-1.5 h-1.5 rounded-full {tagColor(pt.tagFilter)}"></span>
               {pt.tagFilter}
-              <button on:click={() => { activePaneIdx = pi; updateTab({ tagFilter: null }); }} class="ml-0.5 hover:opacity-70" aria-label="Clear tag filter">×</button>
+              <button onclick={() => { activePaneIdx = pi; updateTab({ tagFilter: null }); }} class="ml-0.5 hover:opacity-70" aria-label="Clear tag filter">×</button>
             </div>
           {/if}
 
@@ -727,7 +726,7 @@
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 shrink-0">
               <path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /><path d="M21 21l-6 -6" />
             </svg>
-            <input value={pt.search} on:input={e => { activePaneIdx = pi; updateTab({ search: e.currentTarget.value }); }}
+            <input value={pt.search} oninput={e => { activePaneIdx = pi; updateTab({ search: e.currentTarget.value }); }}
               placeholder="Search"
               class="text-sm text-gray-700 dark:text-gray-200 bg-transparent outline-none w-full placeholder-gray-400" />
           </div>
@@ -743,10 +742,9 @@
         </div>
 
         <!-- File list -->
-        <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-        <div class="flex-1 overflow-y-auto outline-none" tabindex="0"
+        <div class="flex-1 overflow-y-auto outline-none" role="listbox" tabindex="0"
           bind:this={fileListEls[pi]}
-          on:keydown={e => { activePaneIdx = pi; handleKeydown(e, pi, dispItems); }}>
+          onkeydown={e => { activePaneIdx = pi; handleKeydown(e, pi, dispItems); }}>
           {#if pt.loading}
             <div class="flex items-center justify-center h-full gap-2 text-gray-300 dark:text-gray-600">
               <svg class="animate-spin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0"/></svg>
@@ -764,12 +762,13 @@
             </div>
           {:else}
             {#each dispItems as item, i}
-              <!-- svelte-ignore a11y-click-events-have-key-events -->
-              <!-- svelte-ignore a11y-no-static-element-interactions -->
               <div data-idx={i}
-                on:click={() => { activePaneIdx = pi; selectItem(item, pi); }}
-                on:dblclick={() => { activePaneIdx = pi; openItem(item); }}
-                on:contextmenu={e => { activePaneIdx = pi; onContextMenu(e, item); }}
+                role="row"
+                tabindex="0"
+                onclick={() => { activePaneIdx = pi; selectItem(item, pi); }}
+                ondblclick={() => { activePaneIdx = pi; openItem(item); }}
+                oncontextmenu={e => { activePaneIdx = pi; onContextMenu(e, item); }}
+                onkeydown={e => { if (e.key === 'Enter') { activePaneIdx = pi; openItem(item); } }}
                 class="flex items-center px-4 py-1.5 gap-3 cursor-default transition-colors
                   {pt.selected === item.name ? 'bg-[var(--accent)] text-white' : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200'}">
                 {#if item.is_dir}
@@ -809,11 +808,11 @@
               {#each (pt.selectedItem.tags || []) as tag}
                 <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] font-medium text-white {tagColor(tag)}">
                   {tag}
-                  <button on:click|stopPropagation={() => { activePaneIdx = pi; removeTag(tag); }} disabled={tagSaving} class="hover:opacity-70 leading-none">×</button>
+                  <button onclick={(e) => { e.stopPropagation(); activePaneIdx = pi; removeTag(tag); }} disabled={tagSaving} class="hover:opacity-70 leading-none">×</button>
                 </span>
               {/each}
-              <form on:submit|preventDefault={() => { activePaneIdx = pi; addTag(); }} class="flex items-center gap-1">
-                <input value={pt.tagInput} on:input={e => { activePaneIdx = pi; updateTab({ tagInput: e.currentTarget.value }); }}
+              <form onsubmit={(e) => { e.preventDefault(); activePaneIdx = pi; addTag(); }} class="flex items-center gap-1">
+                <input value={pt.tagInput} oninput={e => { activePaneIdx = pi; updateTab({ tagInput: e.currentTarget.value }); }}
                   placeholder="+ add tag" disabled={tagSaving}
                   class="text-[12px] bg-transparent border border-gray-300 dark:border-gray-600 rounded px-1.5 py-0.5 outline-none focus:border-[var(--accent)] w-20 text-gray-700 dark:text-gray-300 placeholder-gray-400" />
               </form>
@@ -840,20 +839,23 @@
     type="button"
     class="fixed inset-0 z-40 cursor-default bg-transparent border-none p-0"
     aria-label="Close context menu"
-    on:click={hideContextMenu}
-    on:keydown={(e) => { if (e.key === 'Escape') hideContextMenu(); }}
+    onclick={hideContextMenu}
+    onkeydown={(e) => { if (e.key === 'Escape') hideContextMenu(); }}
   ></button>
   <div class="fixed z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600
               rounded shadow-lg py-1 min-w-[190px]"
     style="left: {contextMenu.x}px; top: {contextMenu.y}px;"
-    on:click|stopPropagation>
+    role="menu"
+    tabindex="-1"
+    onclick={(e) => e.stopPropagation()}
+    onkeydown={(e) => { if (e.key === 'Escape') hideContextMenu(); }}>
 
     <!-- Quick Convert presets (media files only) -->
     {#each quickConvertPresets(contextMenu.item.extension) as { preset, label }}
       <button
         class="w-full text-left px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300
                hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-        on:click={() => runQuickConvert(contextMenu.item, preset)}
+        onclick={() => runQuickConvert(contextMenu.item, preset)}
       >
         <span class="text-[var(--accent)] font-medium">Quick Convert</span>
         <span>{label}</span>
@@ -865,7 +867,7 @@
       <button
         class="w-full text-left px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300
                hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-        on:click={() => runFadePreset(contextMenu.item, cp.id)}
+        onclick={() => runFadePreset(contextMenu.item, cp.id)}
       >
         <span class="text-[var(--accent)] font-medium">Fade</span>
         <span>{cp.name}</span>
@@ -882,7 +884,7 @@
       <button
         class="w-full text-left px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300
                hover:bg-gray-100 dark:hover:bg-gray-700"
-        on:click={copyWindowsPath}
+        onclick={copyWindowsPath}
       >
         Copy Windows path
       </button>

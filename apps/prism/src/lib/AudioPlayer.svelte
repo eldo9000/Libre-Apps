@@ -1,10 +1,7 @@
 <script>
-  import { onMount } from 'svelte';
-
   let { path, ext, name, size, streamUrl } = $props();
 
   let audioEl = $state(null);
-  let loaded = $state(false);
   let playing = $state(false);
   let currentTime = $state(0);
   let duration = $state(0);
@@ -87,7 +84,7 @@
 <audio
   bind:this={audioEl}
   src={streamUrl(path)}
-  onloadedmetadata={() => { loaded = true; duration = audioEl.duration; }}
+  onloadedmetadata={() => { duration = audioEl.duration; }}
   ontimeupdate={() => { currentTime = audioEl.currentTime; }}
   onplay={() => { playing = true; }}
   onpause={() => { playing = false; }}

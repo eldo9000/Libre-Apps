@@ -4,37 +4,34 @@
  * Override any token after this import in your own app.css if needed.
  */
 
-/* ── Colors: light ─────────────────────────────────────────────────────────── */
+/* ── Colors: light + Typography ─────────────────────────────────────────────── */
 :root {
-  --accent:          #0066cc;
+  --accent:          #06c;
   --accent-hover:    #1e5fa6;
   --titlebar-bg:     #f7f7f7;
-  --surface:         #ffffff;
+  --surface:         #fff;
   --surface-raised:  #f5f5f5;
   --border:          #e5e7eb;
   --text-primary:    #111827;
   --text-secondary:  #6b7280;
+
+  font-family: Geist, -apple-system, BlinkMacSystemFont, 'Segoe UI', Cantarell, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 9%);
 }
 
 /* ── Colors: dark ──────────────────────────────────────────────────────────── */
 html.dark {
-  --accent:          #0066cc;
+  --accent:          #06c;
   --titlebar-bg:     #1f2937;
   --surface:         #111827;
   --surface-raised:  #1f2937;
   --border:          #374151;
   --text-primary:    #f9fafb;
   --text-secondary:  #9ca3af;
-}
-
-/* ── Typography ────────────────────────────────────────────────────────────── */
-:root {
-  font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Cantarell, sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.09);
 }
 
 /* ── Base reset ────────────────────────────────────────────────────────────── */
@@ -61,20 +58,22 @@ html, body, #app {
   width: 6px;
   height: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.18);
+  background: rgb(0 0 0 / 18%);
   border-radius: 3px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.28);
+  background: rgb(0 0 0 / 28%);
 }
 
 /* ── Drag region ───────────────────────────────────────────────────────────── */
 [data-tauri-drag-region] {
-  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -98,14 +97,22 @@ html, body {
 #app > div:first-child {
   border-radius: 10px !important;
   overflow: hidden;
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.24);
+  box-shadow: 0 1px 8px rgb(0 0 0 / 24%);
 }
 
 /* ── Motion ────────────────────────────────────────────────────────────────── */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
+
 .animate-fade-in {
-  animation: fadeIn 150ms ease-out both;
+  animation: fade-in 150ms ease-out both;
 }

@@ -27,7 +27,6 @@
    *   The tooltip itself uses role="tooltip".
    */
 
-  import { tick } from 'svelte';
 
   let {
     content = '',

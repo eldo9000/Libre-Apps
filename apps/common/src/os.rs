@@ -63,7 +63,9 @@ pub fn home_dir() -> PathBuf {
     }
     #[cfg(unix)]
     {
-        extern "C" { fn getuid() -> u32; }
+        extern "C" {
+            fn getuid() -> u32;
+        }
         let uid = unsafe { getuid() };
         PathBuf::from(format!("/home/{uid}"))
     }

@@ -44,7 +44,6 @@ jobs:
 
       - name: cargo clippy
         working-directory: apps
-        continue-on-error: true   # workspace lints (unwrap_used etc.) may produce new warnings
         run: cargo clippy --workspace -- -D warnings
 
       - name: cargo fmt
@@ -56,8 +55,6 @@ jobs:
         run: cargo test --workspace
 
   # ── Linters ──────────────────────────────────────────────────────────────
-  # continue-on-error: true on each step so the first sweep lands without
-  # forcing a clean pass. Remove continue-on-error once violations are fixed.
   lint:
     name: Lint
     runs-on: ubuntu-latest
@@ -77,11 +74,9 @@ jobs:
         run: npm ci
 
       - name: ESLint (Svelte 5 + JS)
-        continue-on-error: true
         run: npm run lint
 
       - name: Stylelint (CSS token enforcement)
-        continue-on-error: true
         run: npm run lint:css
 
       - name: Set up Rust
@@ -90,12 +85,10 @@ jobs:
           cache-workspaces: apps
 
       - name: cargo fmt --check
-        continue-on-error: true
         working-directory: apps
         run: cargo fmt --check --all
 
       - name: cargo clippy (workspace lints)
-        continue-on-error: true
         working-directory: apps
         run: cargo clippy --workspace --all-targets -- -D warnings
 

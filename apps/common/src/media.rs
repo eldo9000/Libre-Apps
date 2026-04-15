@@ -18,12 +18,12 @@
 pub fn category_for_ext(ext: &str) -> &'static str {
     match ext {
         "png" | "jpg" | "jpeg" | "gif" | "webp" | "svg" | "bmp" | "ico" | "avif" => "image",
-        "heic" | "heif" | "tiff" | "tif" | "psd" | "exr" | "hdr" | "dds"
-        | "raw" | "cr2" | "cr3" | "nef" | "arw" | "dng" | "orf" | "rw2" | "xcf" => "image_convert",
-        "mp4" | "m4v" | "webm" | "mov" | "avi" | "mkv" | "flv" | "wmv"
-        | "mpg" | "mpeg" | "ogv" | "ts" | "3gp" | "divx" | "rmvb" | "asf" => "video",
-        "mp3" | "aac" | "ogg" | "oga" | "wav" | "flac" | "m4a" | "opus"
-        | "wma" | "aiff" | "aif" | "alac" | "ac3" | "dts" => "audio",
+        "heic" | "heif" | "tiff" | "tif" | "psd" | "exr" | "hdr" | "dds" | "raw" | "cr2"
+        | "cr3" | "nef" | "arw" | "dng" | "orf" | "rw2" | "xcf" => "image_convert",
+        "mp4" | "m4v" | "webm" | "mov" | "avi" | "mkv" | "flv" | "wmv" | "mpg" | "mpeg" | "ogv"
+        | "ts" | "3gp" | "divx" | "rmvb" | "asf" => "video",
+        "mp3" | "aac" | "ogg" | "oga" | "wav" | "flac" | "m4a" | "opus" | "wma" | "aiff"
+        | "aif" | "alac" | "ac3" | "dts" => "audio",
         "pdf" => "pdf",
         "obj" | "gltf" | "glb" | "stl" | "fbx" | "ply" | "3ds" => "model",
         _ => "unknown",
@@ -85,14 +85,13 @@ pub fn mime_for_ext(ext: &str) -> &'static str {
 /// pipeline routing where sub-categories are not needed.
 pub fn media_type_for(ext: &str) -> &'static str {
     match ext.to_lowercase().as_str() {
-        "jpg" | "jpeg" | "png" | "webp" | "tiff" | "tif" | "bmp" | "gif"
-        | "avif" | "heic" | "heif" | "psd" | "svg" | "ico" | "raw"
-        | "cr2" | "cr3" | "nef" | "arw" | "dng" | "orf" | "rw2"
-        | "exr" | "hdr" | "dds" | "xcf" => "image",
-        "mp4" | "mkv" | "webm" | "avi" | "mov" | "m4v" | "flv" | "wmv"
-        | "ts" | "mpg" | "mpeg" | "3gp" | "ogv" | "divx" | "rmvb" | "asf" => "video",
-        "mp3" | "wav" | "flac" | "ogg" | "oga" | "aac" | "opus" | "m4a" | "wma"
-        | "aiff" | "aif" | "alac" | "ac3" | "dts" => "audio",
+        "jpg" | "jpeg" | "png" | "webp" | "tiff" | "tif" | "bmp" | "gif" | "avif" | "heic"
+        | "heif" | "psd" | "svg" | "ico" | "raw" | "cr2" | "cr3" | "nef" | "arw" | "dng"
+        | "orf" | "rw2" | "exr" | "hdr" | "dds" | "xcf" => "image",
+        "mp4" | "mkv" | "webm" | "avi" | "mov" | "m4v" | "flv" | "wmv" | "ts" | "mpg" | "mpeg"
+        | "3gp" | "ogv" | "divx" | "rmvb" | "asf" => "video",
+        "mp3" | "wav" | "flac" | "ogg" | "oga" | "aac" | "opus" | "m4a" | "wma" | "aiff"
+        | "aif" | "alac" | "ac3" | "dts" => "audio",
         _ => "unknown",
     }
 }

@@ -22,6 +22,7 @@
    * independently.
    */
 
+  // eslint-disable-next-line svelte/valid-compile
   let { children, ...rest } = $props();
 
   onMount(() => initTheme(invoke));

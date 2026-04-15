@@ -44,7 +44,7 @@
       canvasEl.height = viewport.height;
       const ctx = canvasEl.getContext('2d');
       await page.render({ canvasContext: ctx, viewport }).promise;
-    } catch (e) {
+    } catch {
       // ignore render errors silently — canvas may have been remounted
     } finally {
       rendering = false;

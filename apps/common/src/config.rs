@@ -15,11 +15,11 @@ use std::path::PathBuf;
 pub struct FadePreset {
     pub id: String,
     pub name: String,
-    pub media_type: String,      // "image" | "video" | "audio"
+    pub media_type: String, // "image" | "video" | "audio"
     pub output_format: String,
-    pub quality: Option<u32>,    // image quality 1–100
-    pub codec: Option<String>,   // video codec: "h264" | "h265" | "vp9" | "av1" | "copy"
-    pub bitrate: Option<u32>,    // audio/video bitrate kbps
+    pub quality: Option<u32>,     // image quality 1–100
+    pub codec: Option<String>,    // video codec: "h264" | "h265" | "vp9" | "av1" | "copy"
+    pub bitrate: Option<u32>,     // audio/video bitrate kbps
     pub sample_rate: Option<u32>, // audio sample rate Hz
 }
 

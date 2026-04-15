@@ -1,7 +1,5 @@
 <script>
-  import { onMount } from 'svelte';
-
-  let { path, ext, streamUrl } = $props();
+  let { path, ext: _ext, streamUrl } = $props();
 
   let videoEl = $state(null);
   let loaded = $state(false);
@@ -265,7 +263,6 @@
         <div class="flex-1"></div>
 
         <!-- Volume -->
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
           role="group"
           aria-label="Volume"

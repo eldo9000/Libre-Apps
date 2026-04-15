@@ -1,5 +1,5 @@
-use librewin_common::{get_accent as lw_get_accent, get_theme as lw_get_theme};
 use librewin_common::media::{category_for_ext, mime_for_ext};
+use librewin_common::{get_accent as lw_get_accent, get_theme as lw_get_theme};
 use serde::Serialize;
 use std::fs;
 use std::io::{Read, Seek, SeekFrom};
@@ -46,9 +46,7 @@ fn tmp_tag() -> String {
 
 #[command]
 fn get_initial_file() -> Option<String> {
-    std::env::args()
-        .skip(1)
-        .find(|a| !a.starts_with('-'))
+    std::env::args().skip(1).find(|a| !a.starts_with('-'))
 }
 
 #[command]
@@ -58,14 +56,25 @@ fn get_file_info(path: String) -> Result<FileInfo, String> {
         return Err(format!("File not found: {path}"));
     }
     let meta = fs::metadata(p).map_err(|e| e.to_string())?;
-    let name = p.file_name().unwrap_or_default().to_string_lossy().to_string();
-    let ext = p.extension()
+    let name = p
+        .file_name()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
+    let ext = p
+        .extension()
         .unwrap_or_default()
         .to_string_lossy()
         .to_lowercase()
         .to_string();
     let category = category_for_ext(&ext).to_string();
-    Ok(FileInfo { name, ext, size: meta.len(), category, path })
+    Ok(FileInfo {
+        name,
+        ext,
+        size: meta.len(),
+        category,
+        path,
+    })
 }
 
 #[command]
@@ -80,7 +89,10 @@ fn convert_image_to_png(path: String) -> Result<String, String> {
         .and_then(|e| e.to_str())
         .unwrap_or("")
         .to_lowercase();
-    let src = if matches!(ext.as_str(), "heic" | "heif" | "tiff" | "tif" | "psd" | "psb") {
+    let src = if matches!(
+        ext.as_str(),
+        "heic" | "heif" | "tiff" | "tif" | "psd" | "psb"
+    ) {
         format!("{path}[0]")
     } else {
         path.clone()
@@ -109,9 +121,7 @@ fn handle_stream(req: tauri::http::Request<Vec<u8>>) -> tauri::http::Response<Ve
     let uri = req.uri().to_string();
 
     // Strip scheme+host prefix
-    let path_encoded = uri
-        .strip_prefix("mvstream://localhost")
-        .unwrap_or_default();
+    let path_encoded = uri.strip_prefix("mvstream://localhost").unwrap_or_default();
     let path_str = decode_path(path_encoded);
     let path = Path::new(&path_str);
 
@@ -123,7 +133,11 @@ fn handle_stream(req: tauri::http::Request<Vec<u8>>) -> tauri::http::Response<Ve
             .unwrap();
     }
 
-    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
     let mime = mime_for_ext(&ext);
 
     let file_size = match fs::metadata(path) {
@@ -133,11 +147,12 @@ fn handle_stream(req: tauri::http::Request<Vec<u8>>) -> tauri::http::Response<Ve
                 .status(500)
                 .body(format!("Metadata error: {e}").into_bytes())
                 .unwrap();
-        }
+        },
     };
 
     // Parse Range header
-    let range = req.headers()
+    let range = req
+        .headers()
         .get("range")
         .and_then(|v| v.to_str().ok())
         .and_then(|s| s.strip_prefix("bytes="))
@@ -148,9 +163,14 @@ fn handle_stream(req: tauri::http::Request<Vec<u8>>) -> tauri::http::Response<Ve
             let end = if end_str.is_empty() {
                 (start + 2 * 1024 * 1024).min(file_size.saturating_sub(1))
             } else {
-                end_str.parse::<u64>().ok()?.min(file_size.saturating_sub(1))
+                end_str
+                    .parse::<u64>()
+                    .ok()?
+                    .min(file_size.saturating_sub(1))
             };
-            if start > end { return None; }
+            if start > end {
+                return None;
+            }
             Some((start, end))
         });
 
@@ -161,7 +181,7 @@ fn handle_stream(req: tauri::http::Request<Vec<u8>>) -> tauri::http::Response<Ve
                 .status(500)
                 .body(format!("Open error: {e}").into_bytes())
                 .unwrap();
-        }
+        },
     };
 
     if let Some((start, end)) = range {
@@ -204,10 +224,14 @@ fn handle_stream(req: tauri::http::Request<Vec<u8>>) -> tauri::http::Response<Ve
 // ── Theme ─────────────────────────────────────────────────────────────────────
 
 #[tauri::command]
-fn get_theme() -> String { lw_get_theme() }
+fn get_theme() -> String {
+    lw_get_theme()
+}
 
 #[tauri::command]
-fn get_accent() -> String { lw_get_accent() }
+fn get_accent() -> String {
+    lw_get_accent()
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

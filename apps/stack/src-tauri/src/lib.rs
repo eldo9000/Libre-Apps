@@ -6,8 +6,7 @@ use std::path::PathBuf;
 
 #[tauri::command]
 fn read_file(path: String) -> Result<String, String> {
-    std::fs::read_to_string(&path)
-        .map_err(|e| format!("Failed to read {path}: {e}"))
+    std::fs::read_to_string(&path).map_err(|e| format!("Failed to read {path}: {e}"))
 }
 
 #[tauri::command]
@@ -17,8 +16,7 @@ fn write_file(path: String, content: String) -> Result<(), String> {
         std::fs::create_dir_all(parent)
             .map_err(|e| format!("Failed to create directories: {e}"))?;
     }
-    std::fs::write(&path, content)
-        .map_err(|e| format!("Failed to write {path}: {e}"))
+    std::fs::write(&path, content).map_err(|e| format!("Failed to write {path}: {e}"))
 }
 
 // ── File dialogs (rfd — blocking GTK3, fine on Linux from a command thread) ──
@@ -44,8 +42,11 @@ async fn open_file_dialog() -> Result<Option<OpenedFile>, String> {
             let path_str = handle.path().to_string_lossy().into_owned();
             let content = std::fs::read_to_string(&path_str)
                 .map_err(|e| format!("Could not read file: {e}"))?;
-            Ok(Some(OpenedFile { path: path_str, content }))
-        }
+            Ok(Some(OpenedFile {
+                path: path_str,
+                content,
+            }))
+        },
     }
 }
 
@@ -117,10 +118,14 @@ fn export_html(content: String) -> Result<String, String> {
 // ── Theme ─────────────────────────────────────────────────────────────────────
 
 #[tauri::command]
-fn get_theme() -> String { lw_get_theme() }
+fn get_theme() -> String {
+    lw_get_theme()
+}
 
 #[tauri::command]
-fn get_accent() -> String { lw_get_accent() }
+fn get_accent() -> String {
+    lw_get_accent()
+}
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 

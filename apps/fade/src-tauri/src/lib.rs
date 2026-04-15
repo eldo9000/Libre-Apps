@@ -1,6 +1,6 @@
-use librewin_common::{get_accent as lw_get_accent, get_theme as lw_get_theme};
 use librewin_common::config::{read_presets, write_presets, FadePreset};
 use librewin_common::media::media_type_for;
+use librewin_common::{get_accent as lw_get_accent, get_theme as lw_get_theme};
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader};
 use std::path::Path;
@@ -33,30 +33,30 @@ pub struct ConvertOptions {
     pub output_format: String,
     pub output_dir: Option<String>,
     // Image
-    pub resize_mode: Option<String>,   // "none" | "percent" | "pixels"
+    pub resize_mode: Option<String>, // "none" | "percent" | "pixels"
     pub resize_percent: Option<u32>,
     pub resize_width: Option<u32>,
     pub resize_height: Option<u32>,
-    pub quality: Option<u32>,          // 1–100 for lossy formats
-    pub crop_x: Option<u32>,           // crop origin x (pixels from left)
-    pub crop_y: Option<u32>,           // crop origin y (pixels from top)
-    pub crop_width: Option<u32>,       // crop region width
-    pub crop_height: Option<u32>,      // crop region height
-    pub rotation: Option<u32>,         // 0 | 90 | 180 | 270
-    pub flip_h: Option<bool>,          // horizontal mirror
-    pub flip_v: Option<bool>,          // vertical mirror
-    pub auto_rotate: Option<bool>,     // apply EXIF orientation (-auto-orient)
+    pub quality: Option<u32>,      // 1–100 for lossy formats
+    pub crop_x: Option<u32>,       // crop origin x (pixels from left)
+    pub crop_y: Option<u32>,       // crop origin y (pixels from top)
+    pub crop_width: Option<u32>,   // crop region width
+    pub crop_height: Option<u32>,  // crop region height
+    pub rotation: Option<u32>,     // 0 | 90 | 180 | 270
+    pub flip_h: Option<bool>,      // horizontal mirror
+    pub flip_v: Option<bool>,      // vertical mirror
+    pub auto_rotate: Option<bool>, // apply EXIF orientation (-auto-orient)
     // Video
-    pub codec: Option<String>,         // "copy" | "h264" | "h265" | "vp9" | "av1"
-    pub resolution: Option<String>,    // "original" | "1920x1080" | "1280x720" | "854x480"
-    pub trim_start: Option<f64>,       // seconds
-    pub trim_end: Option<f64>,         // seconds
+    pub codec: Option<String>, // "copy" | "h264" | "h265" | "vp9" | "av1"
+    pub resolution: Option<String>, // "original" | "1920x1080" | "1280x720" | "854x480"
+    pub trim_start: Option<f64>, // seconds
+    pub trim_end: Option<f64>, // seconds
     pub remove_audio: Option<bool>,
     pub extract_audio: Option<bool>,
-    pub audio_format: Option<String>,  // for extract_audio path
+    pub audio_format: Option<String>, // for extract_audio path
     // Audio
-    pub bitrate: Option<u32>,          // kbps
-    pub sample_rate: Option<u32>,      // Hz
+    pub bitrate: Option<u32>,     // kbps
+    pub sample_rate: Option<u32>, // Hz
     pub normalize_loudness: Option<bool>,
     // Output naming
     pub output_suffix: Option<String>, // appended to stem before extension (default: "converted")
@@ -78,12 +78,7 @@ pub struct FileInfo {
 /// Get duration from ffprobe JSON output; returns None if unavailable.
 fn probe_duration(path: &str) -> Option<f64> {
     let out = Command::new("ffprobe")
-        .args([
-            "-v", "quiet",
-            "-print_format", "json",
-            "-show_format",
-            path,
-        ])
+        .args(["-v", "quiet", "-print_format", "json", "-show_format", path])
         .output()
         .ok()?;
     let json: serde_json::Value = serde_json::from_slice(&out.stdout).ok()?;
@@ -95,13 +90,11 @@ fn probe_duration(path: &str) -> Option<f64> {
 fn build_output_path(input: &str, new_ext: &str, output_dir: Option<&str>, suffix: &str) -> String {
     let p = Path::new(input);
     let stem = p.file_stem().unwrap_or_default().to_string_lossy();
-    let dir = output_dir
-        .map(|d| d.to_string())
-        .unwrap_or_else(|| {
-            p.parent()
-                .map(|p| p.to_string_lossy().to_string())
-                .unwrap_or_else(|| ".".to_string())
-        });
+    let dir = output_dir.map(|d| d.to_string()).unwrap_or_else(|| {
+        p.parent()
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_else(|| ".".to_string())
+    });
     if suffix.is_empty() {
         format!("{}/{}.{}", dir, stem, new_ext)
     } else {
@@ -111,10 +104,16 @@ fn build_output_path(input: &str, new_ext: &str, output_dir: Option<&str>, suffi
 
 /// Validate that a suffix only contains safe characters (alphanumeric, hyphen, underscore).
 fn validate_suffix(suffix: &str) -> Result<(), String> {
-    if suffix.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
+    if suffix
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    {
         Ok(())
     } else {
-        Err(format!("Invalid suffix '{}': only letters, digits, hyphens, and underscores allowed", suffix))
+        Err(format!(
+            "Invalid suffix '{}': only letters, digits, hyphens, and underscores allowed",
+            suffix
+        ))
     }
 }
 
@@ -134,7 +133,8 @@ fn get_file_info(path: String) -> Result<FileInfo, String> {
         return Err(format!("File not found: {path}"));
     }
     let file_size = p.metadata().map(|m| m.len()).unwrap_or(0);
-    let ext = p.extension()
+    let ext = p
+        .extension()
         .map(|e| e.to_string_lossy().to_lowercase())
         .unwrap_or_default();
     let mtype = media_type_for(&ext);
@@ -163,8 +163,10 @@ fn get_file_info(path: String) -> Result<FileInfo, String> {
     // Video / audio — use ffprobe
     let out = Command::new("ffprobe")
         .args([
-            "-v", "quiet",
-            "-print_format", "json",
+            "-v",
+            "quiet",
+            "-print_format",
+            "json",
             "-show_format",
             "-show_streams",
             &path,
@@ -172,8 +174,7 @@ fn get_file_info(path: String) -> Result<FileInfo, String> {
         .output()
         .map_err(|e| e.to_string())?;
 
-    let json: serde_json::Value = serde_json::from_slice(&out.stdout)
-        .map_err(|e| e.to_string())?;
+    let json: serde_json::Value = serde_json::from_slice(&out.stdout).map_err(|e| e.to_string())?;
 
     let duration_secs = json["format"]["duration"]
         .as_str()
@@ -223,7 +224,10 @@ fn convert_file(
 ) -> Result<(), String> {
     let p = Path::new(&input_path);
     if !p.exists() || !p.is_file() {
-        return Err(format!("File not found or not a regular file: {}", input_path));
+        return Err(format!(
+            "File not found or not a regular file: {}",
+            input_path
+        ));
     }
 
     let ext = options.output_format.to_lowercase();
@@ -235,7 +239,10 @@ fn convert_file(
 
     let mtype = media_type_for(&ext);
     if mtype == "unknown" {
-        return Err(format!("Unsupported output format: {}", options.output_format));
+        return Err(format!(
+            "Unsupported output format: {}",
+            options.output_format
+        ));
     }
 
     let suffix = options.output_suffix.as_deref().unwrap_or("converted");
@@ -254,14 +261,23 @@ fn convert_file(
 
         match result {
             Ok(()) => {
-                let _ = window.emit("job-done", JobDone {
-                    job_id: job_id.clone(),
-                    output_path,
-                });
-            }
+                let _ = window.emit(
+                    "job-done",
+                    JobDone {
+                        job_id: job_id.clone(),
+                        output_path,
+                    },
+                );
+            },
             Err(msg) => {
-                let _ = window.emit("job-error", JobError { job_id, message: msg });
-            }
+                let _ = window.emit(
+                    "job-error",
+                    JobError {
+                        job_id,
+                        message: msg,
+                    },
+                );
+            },
         }
     });
 
@@ -277,11 +293,14 @@ fn run_image_convert(
     output: &str,
     opts: &ConvertOptions,
 ) -> Result<(), String> {
-    let _ = window.emit("job-progress", JobProgress {
-        job_id: job_id.to_string(),
-        percent: 0.0,
-        message: "Converting image…".to_string(),
-    });
+    let _ = window.emit(
+        "job-progress",
+        JobProgress {
+            job_id: job_id.to_string(),
+            percent: 0.0,
+            message: "Converting image…".to_string(),
+        },
+    );
 
     let mut args: Vec<String> = vec![input.to_string()];
 
@@ -307,7 +326,7 @@ fn run_image_convert(
             let pct = opts.resize_percent.unwrap_or(100);
             args.push("-resize".to_string());
             args.push(format!("{}%", pct));
-        }
+        },
         Some("pixels") => {
             let w = opts.resize_width.unwrap_or(0);
             let h = opts.resize_height.unwrap_or(0);
@@ -321,8 +340,8 @@ fn run_image_convert(
                 args.push("-resize".to_string());
                 args.push(format!("x{}", h));
             }
-        }
-        _ => {}
+        },
+        _ => {},
     }
 
     // Rotation
@@ -334,8 +353,12 @@ fn run_image_convert(
     }
 
     // Flip
-    if opts.flip_v == Some(true) { args.push("-flip".to_string()); }
-    if opts.flip_h == Some(true) { args.push("-flop".to_string()); }
+    if opts.flip_v == Some(true) {
+        args.push("-flip".to_string());
+    }
+    if opts.flip_h == Some(true) {
+        args.push("-flop".to_string());
+    }
 
     // Quality (lossy formats)
     if let Some(q) = opts.quality {
@@ -354,11 +377,14 @@ fn run_image_convert(
         .map_err(|e| format!("ImageMagick not found: {e}"))?;
 
     if status.success() {
-        let _ = window.emit("job-progress", JobProgress {
-            job_id: job_id.to_string(),
-            percent: 100.0,
-            message: "Done".to_string(),
-        });
+        let _ = window.emit(
+            "job-progress",
+            JobProgress {
+                job_id: job_id.to_string(),
+                percent: 100.0,
+                message: "Done".to_string(),
+            },
+        );
         Ok(())
     } else {
         Err("ImageMagick convert failed".to_string())
@@ -387,7 +413,11 @@ fn run_video_convert(
 
     // Trim end (ffmpeg -to is relative to -ss when placed after -i)
     if let Some(t) = opts.trim_end {
-        let end = if let Some(ss) = opts.trim_start { t - ss } else { t };
+        let end = if let Some(ss) = opts.trim_start {
+            t - ss
+        } else {
+            t
+        };
         args.extend(["-t".to_string(), end.to_string()]);
     }
 
@@ -431,7 +461,8 @@ fn run_video_convert(
 
     // Progress reporting via pipe
     args.extend([
-        "-progress".to_string(), "pipe:1".to_string(),
+        "-progress".to_string(),
+        "pipe:1".to_string(),
         "-nostats".to_string(),
     ]);
 
@@ -454,11 +485,14 @@ fn run_video_convert(
                 } else {
                     0.0
                 };
-                let _ = window.emit("job-progress", JobProgress {
-                    job_id: job_id.to_string(),
-                    percent,
-                    message: format!("{:.0}s elapsed", elapsed),
-                });
+                let _ = window.emit(
+                    "job-progress",
+                    JobProgress {
+                        job_id: job_id.to_string(),
+                        percent,
+                        message: format!("{:.0}s elapsed", elapsed),
+                    },
+                );
             }
         }
     }
@@ -473,26 +507,53 @@ fn run_video_convert(
 
 fn ffmpeg_video_codec_args(codec: &str) -> Vec<String> {
     match codec {
-        "h264" => vec!["-vcodec".to_string(), "libx264".to_string(),
-                        "-preset".to_string(), "medium".to_string()],
-        "h265" => vec!["-vcodec".to_string(), "libx265".to_string(),
-                        "-preset".to_string(), "medium".to_string()],
-        "vp9"  => vec!["-vcodec".to_string(), "libvpx-vp9".to_string(),
-                        "-b:v".to_string(), "0".to_string(),
-                        "-crf".to_string(), "33".to_string()],
-        "av1"  => vec!["-vcodec".to_string(), "libaom-av1".to_string(),
-                        "-crf".to_string(), "30".to_string(),
-                        "-b:v".to_string(), "0".to_string()],
-        _      => vec!["-c".to_string(), "copy".to_string()],
+        "h264" => vec![
+            "-vcodec".to_string(),
+            "libx264".to_string(),
+            "-preset".to_string(),
+            "medium".to_string(),
+        ],
+        "h265" => vec![
+            "-vcodec".to_string(),
+            "libx265".to_string(),
+            "-preset".to_string(),
+            "medium".to_string(),
+        ],
+        "vp9" => vec![
+            "-vcodec".to_string(),
+            "libvpx-vp9".to_string(),
+            "-b:v".to_string(),
+            "0".to_string(),
+            "-crf".to_string(),
+            "33".to_string(),
+        ],
+        "av1" => vec![
+            "-vcodec".to_string(),
+            "libaom-av1".to_string(),
+            "-crf".to_string(),
+            "30".to_string(),
+            "-b:v".to_string(),
+            "0".to_string(),
+        ],
+        _ => vec!["-c".to_string(), "copy".to_string()],
     }
 }
 
 fn resolution_to_scale(res: &str) -> String {
     match res {
-        "1920x1080" => "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2".to_string(),
-        "1280x720"  => "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2".to_string(),
-        "854x480"   => "scale=854:480:force_original_aspect_ratio=decrease,pad=854:480:(ow-iw)/2:(oh-ih)/2".to_string(),
-        other       => format!("scale={}", other),
+        "1920x1080" => {
+            "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2"
+                .to_string()
+        },
+        "1280x720" => {
+            "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2"
+                .to_string()
+        },
+        "854x480" => {
+            "scale=854:480:force_original_aspect_ratio=decrease,pad=854:480:(ow-iw)/2:(oh-ih)/2"
+                .to_string()
+        },
+        other => format!("scale={}", other),
     }
 }
 
@@ -516,7 +577,11 @@ fn run_audio_convert(
     args.extend(["-i".to_string(), input.to_string()]);
 
     if let Some(t) = opts.trim_end {
-        let end = if let Some(ss) = opts.trim_start { t - ss } else { t };
+        let end = if let Some(ss) = opts.trim_start {
+            t - ss
+        } else {
+            t
+        };
         args.extend(["-t".to_string(), end.to_string()]);
     }
 
@@ -535,7 +600,8 @@ fn run_audio_convert(
     }
 
     args.extend([
-        "-progress".to_string(), "pipe:1".to_string(),
+        "-progress".to_string(),
+        "pipe:1".to_string(),
         "-nostats".to_string(),
     ]);
 
@@ -557,11 +623,14 @@ fn run_audio_convert(
                 } else {
                     0.0
                 };
-                let _ = window.emit("job-progress", JobProgress {
-                    job_id: job_id.to_string(),
-                    percent,
-                    message: format!("{:.0}s elapsed", elapsed),
-                });
+                let _ = window.emit(
+                    "job-progress",
+                    JobProgress {
+                        job_id: job_id.to_string(),
+                        percent,
+                        message: format!("{:.0}s elapsed", elapsed),
+                    },
+                );
             }
         }
     }
@@ -577,10 +646,14 @@ fn run_audio_convert(
 // ── Theme / accent ────────────────────────────────────────────────────────────
 
 #[command]
-fn get_theme() -> String { lw_get_theme() }
+fn get_theme() -> String {
+    lw_get_theme()
+}
 
 #[command]
-fn get_accent() -> String { lw_get_accent() }
+fn get_accent() -> String {
+    lw_get_accent()
+}
 
 // ── Custom presets ────────────────────────────────────────────────────────────
 
@@ -676,7 +749,8 @@ mod tests {
 
     #[test]
     fn build_output_path_custom_output_dir() {
-        let result = build_output_path("/home/user/video.mp4", "mp3", Some("/tmp/out"), "converted");
+        let result =
+            build_output_path("/home/user/video.mp4", "mp3", Some("/tmp/out"), "converted");
         assert_eq!(result, "/tmp/out/video_converted.mp3");
     }
 

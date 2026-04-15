@@ -1,12 +1,6 @@
 <script>
   let { queue, onadd, onremove, onclear } = $props();
 
-  function formatSize(bytes) {
-    if (!bytes) return '';
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  }
 
   function statusColor(status) {
     switch (status) {

@@ -1,6 +1,6 @@
 use librewin_common::{get_accent as lw_get_accent, get_theme as lw_get_theme};
-use tauri::Emitter;
 use tauri::webview::DownloadEvent;
+use tauri::Emitter;
 
 /// Launch a system browser by short name and detach immediately.
 /// The frontend calls this when the user clicks Chrome / Firefox / Brave
@@ -8,10 +8,10 @@ use tauri::webview::DownloadEvent;
 #[tauri::command]
 fn launch_app(app: String) {
     let binary: &str = match app.as_str() {
-        "chrome"  => "google-chrome-stable",
+        "chrome" => "google-chrome-stable",
         "firefox" => "firefox",
-        "brave"   => "brave-browser",
-        _         => return,
+        "brave" => "brave-browser",
+        _ => return,
     };
     let _ = std::process::Command::new(binary)
         .stdin(std::process::Stdio::null())
@@ -149,10 +149,14 @@ const TOOLBAR_INIT_SCRIPT: &str = r#"
 // ── Theme ─────────────────────────────────────────────────────────────────────
 
 #[tauri::command]
-fn get_theme() -> String { lw_get_theme() }
+fn get_theme() -> String {
+    lw_get_theme()
+}
 
 #[tauri::command]
-fn get_accent() -> String { lw_get_accent() }
+fn get_accent() -> String {
+    lw_get_accent()
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -167,8 +171,8 @@ pub fn run() {
         ])
         .setup(|app| {
             let config = app.config();
-            let win_config = config.app.windows.first().cloned()
-                .unwrap_or_else(|| tauri::utils::config::WindowConfig {
+            let win_config = config.app.windows.first().cloned().unwrap_or_else(|| {
+                tauri::utils::config::WindowConfig {
                     label: "main".into(),
                     title: "Ghost".into(),
                     width: 1280.0,
@@ -177,13 +181,17 @@ pub fn run() {
                     resizable: true,
                     center: true,
                     ..Default::default()
-                });
+                }
+            });
 
             tauri::WebviewWindowBuilder::from_config(app, &win_config)?
                 .initialization_script(TOOLBAR_INIT_SCRIPT)
                 .on_download(|webview, event| {
                     match event {
-                        DownloadEvent::Requested { url: _, destination } => {
+                        DownloadEvent::Requested {
+                            url: _,
+                            destination,
+                        } => {
                             // Route all downloads to ~/Downloads, preserving the suggested filename
                             let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
                             let filename = destination
@@ -195,8 +203,12 @@ pub fn run() {
                                 .join("Downloads")
                                 .join(&filename);
                             true // allow the download
-                        }
-                        DownloadEvent::Finished { url: _, path, success } => {
+                        },
+                        DownloadEvent::Finished {
+                            url: _,
+                            path,
+                            success,
+                        } => {
                             if success {
                                 let filename = path
                                     .as_ref()
@@ -208,7 +220,7 @@ pub fn run() {
                                 let _ = webview.emit("download-complete", filename);
                             }
                             false
-                        }
+                        },
                         _ => true,
                     }
                 })

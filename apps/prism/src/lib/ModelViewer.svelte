@@ -138,7 +138,7 @@
       } else {
         // Fallback: try GLTFLoader for fbx/ply/3ds — may fail but worth trying
         const loader = new GLTFLoader();
-        loader.load(url, (gltf) => onLoaded(gltf.scene), undefined, (e) => {
+        loader.load(url, (gltf) => onLoaded(gltf.scene), undefined, (_e) => {
           errorMsg = `Unsupported 3D format: .${lowerExt}`;
           loadState = 'error';
         });

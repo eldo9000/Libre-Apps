@@ -5,6 +5,7 @@
 @import '@libre/ui/src/tokens.css';
 
 /* ── Stack extended tokens — editor-grade surface hierarchy ────────────────── */
+
 /*
  * These hex values are Stack-specific palette overrides. They cannot be
  * derived from tokens.css because Stack uses a tighter, cooler-toned
@@ -56,7 +57,7 @@ html.dark {
 
 /* ── Base ──────────────────────────────────────────────────────────────────── */
 html, body, #app {
-  font-family: 'Geist', system-ui, sans-serif;
+  font-family: Geist, system-ui, sans-serif;
   background: var(--surface);
   color: var(--text);
 }
@@ -92,33 +93,37 @@ html, body, #app {
   padding: 0 16px;
 }
 
+/* stylelint-disable selector-class-pattern */
 .cm-activeLine {
-  background: rgba(0, 102, 204, 0.05) !important;
+  background: rgb(0 102 204 / 5%) !important;
 }
 
 .cm-activeLineGutter {
-  background: rgba(0, 102, 204, 0.05) !important;
+  background: rgb(0 102 204 / 5%) !important;
   color: var(--accent) !important;
 }
 
 .cm-selectionBackground {
-  background: rgba(0, 102, 204, 0.2) !important;
+  background: rgb(0 102 204 / 20%) !important;
 }
 
 /* Search highlight */
 .cm-searchMatch {
-  background-color: rgba(255, 200, 0, 0.3);
+  background-color: rgb(255 200 0 / 30%);
   border-radius: 2px;
 }
 
 .cm-searchMatch-selected {
-  background-color: rgba(255, 140, 0, 0.4);
+  background-color: rgb(255 140 0 / 40%);
 }
 
-/* Markdown heading styles in editor */
+/* Markdown heading styles in editor — CodeMirror internal token classes */
+/* stylelint-disable declaration-block-single-line-max-declarations */
 .ͼb { color: var(--accent) !important; font-weight: 600; }   /* h1 */
 .ͼc { color: var(--accent) !important; font-weight: 600; }   /* h2 */
 .ͼd { color: var(--accent) !important; }                      /* h3 */
+/* stylelint-enable declaration-block-single-line-max-declarations */
+/* stylelint-enable selector-class-pattern */
 
 /* ── Scrollbar (token-aware override) ──────────────────────────────────────── */
 ::-webkit-scrollbar-thumb { background: var(--border); }
@@ -132,6 +137,7 @@ html, body, #app {
   flex-shrink: 0;
   transition: background 150ms;
 }
+
 .resize-handle:hover, .resize-handle.dragging {
   background: var(--accent);
 }
@@ -141,6 +147,7 @@ html, body, #app {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
+
 .unsaved-dot {
   animation: pulse-dot 2s ease-in-out infinite;
 }

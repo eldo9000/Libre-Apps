@@ -1,7 +1,7 @@
-use librewin_common::{get_accent as lw_get_accent, get_theme as lw_get_theme};
 use librewin_common::config::{read_presets, FadePreset};
 use librewin_common::os::resolve_binary;
 use librewin_common::xattr as lx;
+use librewin_common::{get_accent as lw_get_accent, get_theme as lw_get_theme};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
@@ -19,7 +19,7 @@ pub struct FileEntry {
     pub size: Option<u64>,
     pub modified: Option<u64>, // Unix timestamp (seconds)
     pub extension: Option<String>,
-    pub tags: Vec<String>,     // xattr user.tags — comma-separated, parsed here
+    pub tags: Vec<String>, // xattr user.tags — comma-separated, parsed here
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -170,16 +170,27 @@ fn get_volumes() -> Vec<VolumeInfo> {
                 || mount == "/"
                 || matches!(
                     fstype,
-                    "tmpfs" | "devtmpfs" | "squashfs" | "overlay"
-                        | "cgroup" | "cgroup2" | "pstore" | "bpf"
-                        | "tracefs" | "debugfs" | "securityfs" | "efivarfs"
+                    "tmpfs"
+                        | "devtmpfs"
+                        | "squashfs"
+                        | "overlay"
+                        | "cgroup"
+                        | "cgroup2"
+                        | "pstore"
+                        | "bpf"
+                        | "tracefs"
+                        | "debugfs"
+                        | "securityfs"
+                        | "efivarfs"
                 );
 
             if skip {
                 continue;
             }
 
-            let label = mount.split('/').rfind(|s| !s.is_empty())
+            let label = mount
+                .split('/')
+                .rfind(|s| !s.is_empty())
                 .unwrap_or(mount)
                 .to_string();
 
@@ -202,7 +213,10 @@ fn get_wine_status() -> WineStatus {
     let home = std::env::var("HOME").unwrap_or_default();
     let wineprefix_initialized = Path::new(&format!("{home}/.wine")).exists();
 
-    WineStatus { winepath_available, wineprefix_initialized }
+    WineStatus {
+        winepath_available,
+        wineprefix_initialized,
+    }
 }
 
 /// Translate a Linux path to its Windows equivalent via `winepath -w`.
@@ -210,8 +224,7 @@ fn get_wine_status() -> WineStatus {
 /// Returns Err("wine_not_initialized") if ~/.wine does not exist yet.
 #[command]
 fn get_windows_path(path: String) -> Result<String, String> {
-    let winepath = resolve_binary("winepath")
-        .ok_or_else(|| "winepath_not_found".to_string())?;
+    let winepath = resolve_binary("winepath").ok_or_else(|| "winepath_not_found".to_string())?;
 
     let home = std::env::var("HOME").unwrap_or_default();
     if !Path::new(&format!("{home}/.wine")).exists() {
@@ -225,7 +238,10 @@ fn get_windows_path(path: String) -> Result<String, String> {
         .map_err(|e| format!("winepath exec failed: {e}"))?;
 
     if !out.status.success() {
-        return Err(format!("winepath error: {}", String::from_utf8_lossy(&out.stderr).trim()));
+        return Err(format!(
+            "winepath error: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        ));
     }
 
     Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
@@ -261,11 +277,20 @@ fn run_fade_preset(window: tauri::Window, path: String, preset_id: String) -> Re
 
     let presets = read_presets();
 
-    let preset = presets.into_iter().find(|pr| pr.id == preset_id)
+    let preset = presets
+        .into_iter()
+        .find(|pr| pr.id == preset_id)
         .ok_or_else(|| format!("Preset not found: {preset_id}"))?;
 
-    let stem = p.file_stem().unwrap_or_default().to_string_lossy().to_string();
-    let dir = p.parent().map(|d| d.to_string_lossy().to_string()).unwrap_or_else(|| ".".to_string());
+    let stem = p
+        .file_stem()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
+    let dir = p
+        .parent()
+        .map(|d| d.to_string_lossy().to_string())
+        .unwrap_or_else(|| ".".to_string());
     let out_ext = preset.output_format.to_lowercase();
     let output_path = format!("{}/{}_converted.{}", dir, stem, out_ext);
 
@@ -277,7 +302,7 @@ fn run_fade_preset(window: tauri::Window, path: String, preset_id: String) -> Re
             }
             a.push("-strip".into());
             ("magick", a)
-        }
+        },
         "video" => {
             let mut a = vec!["-y".into(), "-i".into(), path.clone()];
             let codec = preset.codec.as_deref().unwrap_or("copy");
@@ -285,24 +310,56 @@ fn run_fade_preset(window: tauri::Window, path: String, preset_id: String) -> Re
                 a.extend(["-c".into(), "copy".into()]);
             } else {
                 let codec_args: Vec<String> = match codec {
-                    "h264" => vec!["-vcodec".into(), "libx264".into(), "-preset".into(), "medium".into()],
-                    "h265" => vec!["-vcodec".into(), "libx265".into(), "-preset".into(), "medium".into()],
-                    "vp9"  => vec!["-vcodec".into(), "libvpx-vp9".into(), "-b:v".into(), "0".into(), "-crf".into(), "33".into()],
-                    "av1"  => vec!["-vcodec".into(), "libaom-av1".into(), "-crf".into(), "30".into(), "-b:v".into(), "0".into()],
-                    _      => vec!["-c".into(), "copy".into()],
+                    "h264" => vec![
+                        "-vcodec".into(),
+                        "libx264".into(),
+                        "-preset".into(),
+                        "medium".into(),
+                    ],
+                    "h265" => vec![
+                        "-vcodec".into(),
+                        "libx265".into(),
+                        "-preset".into(),
+                        "medium".into(),
+                    ],
+                    "vp9" => vec![
+                        "-vcodec".into(),
+                        "libvpx-vp9".into(),
+                        "-b:v".into(),
+                        "0".into(),
+                        "-crf".into(),
+                        "33".into(),
+                    ],
+                    "av1" => vec![
+                        "-vcodec".into(),
+                        "libaom-av1".into(),
+                        "-crf".into(),
+                        "30".into(),
+                        "-b:v".into(),
+                        "0".into(),
+                    ],
+                    _ => vec!["-c".into(), "copy".into()],
                 };
                 a.extend(codec_args);
             }
-            if let Some(br) = preset.bitrate { a.extend(["-b:a".into(), format!("{}k", br)]); }
-            if let Some(sr) = preset.sample_rate { a.extend(["-ar".into(), sr.to_string()]); }
+            if let Some(br) = preset.bitrate {
+                a.extend(["-b:a".into(), format!("{}k", br)]);
+            }
+            if let Some(sr) = preset.sample_rate {
+                a.extend(["-ar".into(), sr.to_string()]);
+            }
             ("ffmpeg", a)
-        }
+        },
         "audio" => {
             let mut a = vec!["-y".into(), "-i".into(), path.clone(), "-vn".into()];
-            if let Some(br) = preset.bitrate { a.extend(["-b:a".into(), format!("{}k", br)]); }
-            if let Some(sr) = preset.sample_rate { a.extend(["-ar".into(), sr.to_string()]); }
+            if let Some(br) = preset.bitrate {
+                a.extend(["-b:a".into(), format!("{}k", br)]);
+            }
+            if let Some(sr) = preset.sample_rate {
+                a.extend(["-ar".into(), sr.to_string()]);
+            }
             ("ffmpeg", a)
-        }
+        },
         other => return Err(format!("Unknown media type: {other}")),
     };
 
@@ -311,9 +368,15 @@ fn run_fade_preset(window: tauri::Window, path: String, preset_id: String) -> Re
 
     std::thread::spawn(move || {
         #[derive(serde::Serialize, Clone)]
-        struct ConvertResult { input: String, output: String }
+        struct ConvertResult {
+            input: String,
+            output: String,
+        }
         #[derive(serde::Serialize, Clone)]
-        struct ConvertFail { input: String, message: String }
+        struct ConvertFail {
+            input: String,
+            message: String,
+        }
 
         let output = std::process::Command::new(&cmd)
             .args(&args)
@@ -322,13 +385,39 @@ fn run_fade_preset(window: tauri::Window, path: String, preset_id: String) -> Re
             .output();
 
         match output {
-            Ok(out) if out.status.success() => { let _ = window.emit("quick-convert-done", ConvertResult { input: path, output: output_path }); }
+            Ok(out) if out.status.success() => {
+                let _ = window.emit(
+                    "quick-convert-done",
+                    ConvertResult {
+                        input: path,
+                        output: output_path,
+                    },
+                );
+            },
             Ok(out) => {
                 let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
-                let message = if stderr.is_empty() { format!("{cmd} failed") } else { stderr };
-                let _ = window.emit("quick-convert-error", ConvertFail { input: path, message });
-            }
-            Err(e) => { let _ = window.emit("quick-convert-error", ConvertFail { input: path, message: format!("{cmd} not found: {e}") }); }
+                let message = if stderr.is_empty() {
+                    format!("{cmd} failed")
+                } else {
+                    stderr
+                };
+                let _ = window.emit(
+                    "quick-convert-error",
+                    ConvertFail {
+                        input: path,
+                        message,
+                    },
+                );
+            },
+            Err(e) => {
+                let _ = window.emit(
+                    "quick-convert-error",
+                    ConvertFail {
+                        input: path,
+                        message: format!("{cmd} not found: {e}"),
+                    },
+                );
+            },
         }
     });
 
@@ -352,47 +441,80 @@ fn quick_convert(window: tauri::Window, path: String, preset: String) -> Result<
         return Err(format!("File not found: {path}"));
     }
 
-    let stem = p.file_stem().unwrap_or_default().to_string_lossy().to_string();
-    let dir = p.parent().map(|d| d.to_string_lossy().to_string()).unwrap_or_else(|| ".".to_string());
+    let stem = p
+        .file_stem()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
+    let dir = p
+        .parent()
+        .map(|d| d.to_string_lossy().to_string())
+        .unwrap_or_else(|| ".".to_string());
 
     let (cmd, args, out_ext): (&str, Vec<String>, &str) = match preset.as_str() {
         "video_mp4" => (
             "ffmpeg",
             vec![
-                "-y".into(), "-i".into(), path.clone(),
-                "-vcodec".into(), "libx264".into(), "-preset".into(), "medium".into(),
-                "-b:a".into(), "192k".into(), "-ar".into(), "48000".into(),
+                "-y".into(),
+                "-i".into(),
+                path.clone(),
+                "-vcodec".into(),
+                "libx264".into(),
+                "-preset".into(),
+                "medium".into(),
+                "-b:a".into(),
+                "192k".into(),
+                "-ar".into(),
+                "48000".into(),
             ],
             "mp4",
         ),
         "image_jpeg" => (
             "magick",
-            vec![path.clone(), "-quality".into(), "85".into(), "-strip".into()],
+            vec![
+                path.clone(),
+                "-quality".into(),
+                "85".into(),
+                "-strip".into(),
+            ],
             "jpg",
         ),
-        "image_png" => (
-            "magick",
-            vec![path.clone(), "-strip".into()],
-            "png",
-        ),
+        "image_png" => ("magick", vec![path.clone(), "-strip".into()], "png"),
         "image_webp" => (
             "magick",
-            vec![path.clone(), "-quality".into(), "85".into(), "-strip".into()],
+            vec![
+                path.clone(),
+                "-quality".into(),
+                "85".into(),
+                "-strip".into(),
+            ],
             "webp",
         ),
         "audio_mp3" => (
             "ffmpeg",
             vec![
-                "-y".into(), "-i".into(), path.clone(),
-                "-vn".into(), "-b:a".into(), "192k".into(), "-ar".into(), "44100".into(),
+                "-y".into(),
+                "-i".into(),
+                path.clone(),
+                "-vn".into(),
+                "-b:a".into(),
+                "192k".into(),
+                "-ar".into(),
+                "44100".into(),
             ],
             "mp3",
         ),
         "audio_flac" => (
             "ffmpeg",
             vec![
-                "-y".into(), "-i".into(), path.clone(),
-                "-vn".into(), "-c:a".into(), "flac".into(), "-ar".into(), "44100".into(),
+                "-y".into(),
+                "-i".into(),
+                path.clone(),
+                "-vn".into(),
+                "-c:a".into(),
+                "flac".into(),
+                "-ar".into(),
+                "44100".into(),
             ],
             "flac",
         ),
@@ -406,9 +528,15 @@ fn quick_convert(window: tauri::Window, path: String, preset: String) -> Result<
     let cmd = cmd.to_string();
     std::thread::spawn(move || {
         #[derive(serde::Serialize, Clone)]
-        struct ConvertResult { input: String, output: String }
+        struct ConvertResult {
+            input: String,
+            output: String,
+        }
         #[derive(serde::Serialize, Clone)]
-        struct ConvertFail { input: String, message: String }
+        struct ConvertFail {
+            input: String,
+            message: String,
+        }
 
         let output = std::process::Command::new(&cmd)
             .args(&full_args)
@@ -418,22 +546,38 @@ fn quick_convert(window: tauri::Window, path: String, preset: String) -> Result<
 
         match output {
             Ok(out) if out.status.success() => {
-                let _ = window.emit("quick-convert-done", ConvertResult {
-                    input: path,
-                    output: output_path,
-                });
-            }
+                let _ = window.emit(
+                    "quick-convert-done",
+                    ConvertResult {
+                        input: path,
+                        output: output_path,
+                    },
+                );
+            },
             Ok(out) => {
                 let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
-                let message = if stderr.is_empty() { format!("{cmd} conversion failed") } else { stderr };
-                let _ = window.emit("quick-convert-error", ConvertFail { input: path, message });
-            }
+                let message = if stderr.is_empty() {
+                    format!("{cmd} conversion failed")
+                } else {
+                    stderr
+                };
+                let _ = window.emit(
+                    "quick-convert-error",
+                    ConvertFail {
+                        input: path,
+                        message,
+                    },
+                );
+            },
             Err(e) => {
-                let _ = window.emit("quick-convert-error", ConvertFail {
-                    input: path,
-                    message: format!("{cmd} not found: {e}"),
-                });
-            }
+                let _ = window.emit(
+                    "quick-convert-error",
+                    ConvertFail {
+                        input: path,
+                        message: format!("{cmd} not found: {e}"),
+                    },
+                );
+            },
         }
     });
 
@@ -443,10 +587,14 @@ fn quick_convert(window: tauri::Window, path: String, preset: String) -> Result<
 // ── Theme ─────────────────────────────────────────────────────────────────────
 
 #[tauri::command]
-fn get_theme() -> String { lw_get_theme() }
+fn get_theme() -> String {
+    lw_get_theme()
+}
 
 #[tauri::command]
-fn get_accent() -> String { lw_get_accent() }
+fn get_accent() -> String {
+    lw_get_accent()
+}
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
@@ -460,18 +608,19 @@ pub fn run() {
             // Super+E — toggle Shelf visibility (Shelf mode)
             let shortcut: Shortcut = "Super+E".parse()?;
             let handle = app.handle().clone();
-            app.global_shortcut().on_shortcut(shortcut, move |_app, _shortcut, event| {
-                if event.state == ShortcutState::Pressed {
-                    if let Some(window) = handle.get_webview_window("main") {
-                        if window.is_focused().unwrap_or(false) {
-                            let _ = window.hide();
-                        } else {
-                            let _ = window.show();
-                            let _ = window.set_focus();
+            app.global_shortcut()
+                .on_shortcut(shortcut, move |_app, _shortcut, event| {
+                    if event.state == ShortcutState::Pressed {
+                        if let Some(window) = handle.get_webview_window("main") {
+                            if window.is_focused().unwrap_or(false) {
+                                let _ = window.hide();
+                            } else {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
                         }
                     }
-                }
-            })?;
+                })?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

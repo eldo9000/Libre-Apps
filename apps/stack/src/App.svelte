@@ -29,8 +29,9 @@
     };
   }
 
-  let tabs = $state([makeTab()]);
-  let activeTabId = $state(tabs[0].id);
+  const _initialTab = makeTab();
+  let tabs = $state([_initialTab]);
+  let activeTabId = $state(_initialTab.id);
   let activeTab = $derived(tabs.find(t => t.id === activeTabId) ?? tabs[0]);
 
   // ── Panel state ─────────────────────────────────────────────────────────────
@@ -108,7 +109,6 @@
   function jumpToHeading(text) {
     if (!view) return;
     const doc = view.state.doc.toString();
-    const target = `# ${text}`;
     // Find any heading line matching this text
     const lines = doc.split('\n');
     let pos = 0;
@@ -583,7 +583,8 @@
         {/if}
       </div>
 
-      <!-- Left resize handle -->
+      <!-- Left resize handle — separator role is interactive when focusable (ARIA spec) -->
+      <!-- svelte-ignore a11y_no_noninteractive_tabindex a11y_no_noninteractive_element_interactions -->
       <div class="resize-handle" onmousedown={startResizeLeft} role="separator" aria-orientation="vertical" tabindex="0"></div>
     {/if}
 
@@ -592,6 +593,7 @@
 
     <!-- Right resize handle -->
     {#if rightOpen}
+      <!-- svelte-ignore a11y_no_noninteractive_tabindex a11y_no_noninteractive_element_interactions -->
       <div class="resize-handle" onmousedown={startResizeRight} role="separator" aria-orientation="vertical" tabindex="0"></div>
 
       <!-- Right panel: Stats / Format / Search -->
@@ -723,10 +725,12 @@
     color: var(--text-2);
     transition: background 120ms, color 120ms;
   }
+
   :global(.titlebar-btn:hover) {
     background: var(--surface-3);
     color: var(--text);
   }
+
   :global(.panel-tab) {
     padding: 4px 10px 6px;
     font-size: 11px;
@@ -744,16 +748,19 @@
     justify-content: space-between;
     align-items: center;
   }
+
   :global(.stat-label) {
     font-size: 11px;
     color: var(--text-2);
   }
+
   :global(.stat-value) {
     font-size: 12px;
     font-weight: 500;
     color: var(--text);
     font-variant-numeric: tabular-nums;
   }
+
   :global(.action-btn) {
     padding: 5px 10px;
     font-size: 11px;
@@ -766,6 +773,7 @@
     transition: opacity 120ms;
   }
   :global(.action-btn:hover) { opacity: 0.88; }
+
   :global(.export-item) {
     display: block;
     padding: 7px 12px;

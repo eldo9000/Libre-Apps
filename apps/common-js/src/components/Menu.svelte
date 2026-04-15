@@ -145,6 +145,7 @@
                    focus:bg-[var(--surface-raised)]"
           >
             {#if item.icon}
+              <!-- eslint-disable-next-line svelte/no-at-html-tags -->
               <span class="shrink-0 text-[var(--text-secondary)]">{@html item.icon}</span>
             {/if}
             {item.label}

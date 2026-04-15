@@ -211,7 +211,7 @@
   let presetNameInput = $state('');
 
   async function loadPresets() {
-    try { presets = await invoke('list_presets'); } catch (_) {}
+    try { presets = await invoke('list_presets'); } catch { /* no-op: presets stay empty */ }
   }
 
   async function savePreset() {
@@ -268,7 +268,6 @@
   ];
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
 <WindowFrame
   ondragover={onWindowDragover}
   ondragleave={onWindowDragleave}

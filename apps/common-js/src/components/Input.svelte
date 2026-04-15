@@ -34,6 +34,7 @@
    *   <Input bind:value={search} label="Search" placeholder="Search..." />
    */
 
+  /* eslint-disable svelte/valid-compile */
   let {
     value = $bindable(''),
     label = '',
@@ -49,8 +50,9 @@
     ...restProps
   } = $props();
 
-  // Stable ID for label association
+  // Stable ID for label association — generated once, not reactive (Math.random must not re-run)
   const inputId = explicitId ?? `input-${Math.random().toString(36).slice(2, 8)}`;
+  /* eslint-enable svelte/valid-compile */
   const errorId = `${inputId}-error`;
 </script>
 

@@ -26,7 +26,8 @@ pub fn read_tags(path: &str) -> Vec<String> {
 /// Write tags to a file's `user.tags` xattr.
 /// Passing an empty slice removes the attribute entirely.
 pub fn write_tags(path: &str, tags: &[String]) -> Result<(), String> {
-    let value: String = tags.iter()
+    let value: String = tags
+        .iter()
         .map(|t| t.trim())
         .filter(|t| !t.is_empty())
         .collect::<Vec<_>>()
@@ -34,13 +35,12 @@ pub fn write_tags(path: &str, tags: &[String]) -> Result<(), String> {
 
     if value.is_empty() {
         match xattr::remove(path, "user.tags") {
-            Ok(_) => {}
-            Err(e) if e.raw_os_error() == Some(61) => {} // ENODATA — already absent
+            Ok(_) => {},
+            Err(e) if e.raw_os_error() == Some(61) => {}, // ENODATA — already absent
             Err(e) => return Err(e.to_string()),
         }
     } else {
-        xattr::set(path, "user.tags", value.as_bytes())
-            .map_err(|e| e.to_string())?;
+        xattr::set(path, "user.tags", value.as_bytes()).map_err(|e| e.to_string())?;
     }
     Ok(())
 }

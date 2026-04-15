@@ -96,11 +96,10 @@
 </script>
 
 {#if open}
-  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
   <!-- Backdrop -->
   <div
     class="fixed inset-0 z-50 flex items-center justify-center p-4"
-    style="background: rgba(0,0,0,0.4)"
+    style="background: rgb(0 0 0 / 40%)"
     onclick={handleBackdropClick}
     onkeydown={handleKeydown}
     role="presentation"
