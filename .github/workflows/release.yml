@@ -253,44 +253,19 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends minisign
 
-      - name: Set up Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: stable
-          cache-workspaces: apps
+      - name: Install Syft
+        uses: anchore/sbom-action/download-syft@v0
 
-      - name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@main
-
-      - name: Install cargo-sbom
-        run: cargo binstall cargo-sbom --no-confirm
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Generate Rust SBOMs
+      - name: Generate SBOMs
         run: |
           mkdir -p sbom
-          cd apps
           for app in shelf stack prism fade ghost; do
-            echo "Generating Rust SBOM: $app"
-            cargo sbom --cargo-package "$app" > "../sbom/$app.rust.sbom.json"
+            echo "Generating SBOM: $app"
+            syft "apps/$app" \
+              --output cyclonedx-json \
+              --file "sbom/$app.sbom.json"
           done
-
-      - name: Generate npm SBOMs
-        run: |
-          for app in shelf stack prism fade ghost; do
-            echo "Installing deps: $app"
-            npm install --prefix "apps/$app" --prefer-offline --no-audit --no-fund 2>/dev/null || true
-            echo "Generating npm SBOM: $app"
-            npm sbom \
-              --prefix "apps/$app" \
-              --sbom-format cyclonedx \
-              --sbom-type application \
-              > "sbom/$app.npm.sbom.json"
-          done
+          ls -lh sbom/
 
       - name: Sign SBOMs
         env:
