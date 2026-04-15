@@ -113,7 +113,7 @@ fn image_dimensions_from_header(path: &Path, ext: &str) -> (Option<u32>, Option<
             let w = u32::from_be_bytes([header[16], header[17], header[18], header[19]]);
             let h = u32::from_be_bytes([header[20], header[21], header[22], header[23]]);
             (Some(w), Some(h))
-        }
+        },
         "gif" => {
             // GIF header: bytes 6-7 width, 8-9 height (little-endian u16)
             if header.len() < 10 {
@@ -122,7 +122,7 @@ fn image_dimensions_from_header(path: &Path, ext: &str) -> (Option<u32>, Option<
             let w = u16::from_le_bytes([header[6], header[7]]) as u32;
             let h = u16::from_le_bytes([header[8], header[9]]) as u32;
             (Some(w), Some(h))
-        }
+        },
         "webp" => {
             // WebP: check for "RIFF....WEBPVP8 " (lossy) or "RIFF....WEBPVP8L" (lossless)
             // VP8 : width at bytes 26-27 (LE u16, mask 0x3FFF), height 28-29 (LE u16, mask 0x3FFF)
@@ -141,20 +141,22 @@ fn image_dimensions_from_header(path: &Path, ext: &str) -> (Option<u32>, Option<
                 return (Some(w), Some(h));
             }
             (None, None)
-        }
+        },
         "jpg" | "jpeg" => {
             // JPEG: scan for SOF0/SOF1/SOF2 markers
             jpeg_dimensions(path)
-        }
+        },
         "bmp" => {
             // BMP: bytes 18-21 width, 22-25 height (LE i32)
             if header.len() < 26 {
                 return (None, None);
             }
-            let w = i32::from_le_bytes([header[18], header[19], header[20], header[21]]).unsigned_abs();
-            let h = i32::from_le_bytes([header[22], header[23], header[24], header[25]]).unsigned_abs();
+            let w =
+                i32::from_le_bytes([header[18], header[19], header[20], header[21]]).unsigned_abs();
+            let h =
+                i32::from_le_bytes([header[22], header[23], header[24], header[25]]).unsigned_abs();
             (Some(w), Some(h))
-        }
+        },
         _ => (None, None),
     }
 }
@@ -308,7 +310,13 @@ fn exif_gps_coord(
             let min = v[1].num as f64 / v[1].denom as f64;
             let sec = v[2].num as f64 / v[2].denom as f64;
             let decimal = deg + min / 60.0 + sec / 3600.0;
-            let suffix = ref_str.unwrap_or_else(|| if is_lat { "N".to_string() } else { "E".to_string() });
+            let suffix = ref_str.unwrap_or_else(|| {
+                if is_lat {
+                    "N".to_string()
+                } else {
+                    "E".to_string()
+                }
+            });
             return Some(format!("{:.6}° {}", decimal, suffix));
         }
     }
@@ -320,8 +328,10 @@ fn metadata_media(path: &Path, file_size: u64, category: &str) -> Metadata {
 
     let ffprobe_result = std::process::Command::new("ffprobe")
         .args([
-            "-v", "quiet",
-            "-print_format", "json",
+            "-v",
+            "quiet",
+            "-print_format",
+            "json",
             "-show_streams",
             "-show_format",
             &path_str,
@@ -370,36 +380,58 @@ fn metadata_media(path: &Path, file_size: u64, category: &str) -> Metadata {
 
                 if let Some(arr) = streams.as_array() {
                     for stream in arr {
-                        let stype = stream.get("codec_type").and_then(|v| v.as_str()).unwrap_or("");
+                        let stype = stream
+                            .get("codec_type")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("");
                         match stype {
                             "video" if category == "video" => {
-                                codec = stream.get("codec_name").and_then(|v| v.as_str()).map(str::to_string);
+                                codec = stream
+                                    .get("codec_name")
+                                    .and_then(|v| v.as_str())
+                                    .map(str::to_string);
                                 // Frame rate: r_frame_rate is a fraction like "30000/1001"
-                                if let Some(rfr) = stream.get("r_frame_rate").and_then(|v| v.as_str()) {
+                                if let Some(rfr) =
+                                    stream.get("r_frame_rate").and_then(|v| v.as_str())
+                                {
                                     frame_rate = Some(format_fraction_fps(rfr));
                                 }
-                            }
+                            },
                             "audio" => {
                                 n_audio += 1;
                                 if codec.is_none() || category == "audio" {
-                                    codec = stream.get("codec_name").and_then(|v| v.as_str()).map(str::to_string);
+                                    codec = stream
+                                        .get("codec_name")
+                                        .and_then(|v| v.as_str())
+                                        .map(str::to_string);
                                     sample_rate = stream
                                         .get("sample_rate")
                                         .and_then(|v| v.as_str())
                                         .and_then(|s| s.parse::<u32>().ok());
-                                    channels = stream.get("channels").and_then(|v| v.as_u64()).map(|c| c as u32);
+                                    channels = stream
+                                        .get("channels")
+                                        .and_then(|v| v.as_u64())
+                                        .map(|c| c as u32);
                                 }
                                 // Audio ID3 tags at stream level (fallback)
                                 if let Some(tags) = stream.get("tags") {
-                                    if id3_artist.is_none() { id3_artist = tag_value(tags, &["artist", "ARTIST"]); }
-                                    if id3_album.is_none()  { id3_album  = tag_value(tags, &["album",  "ALBUM" ]); }
-                                    if id3_title.is_none()  { id3_title  = tag_value(tags, &["title",  "TITLE" ]); }
+                                    if id3_artist.is_none() {
+                                        id3_artist = tag_value(tags, &["artist", "ARTIST"]);
+                                    }
+                                    if id3_album.is_none() {
+                                        id3_album = tag_value(tags, &["album", "ALBUM"]);
+                                    }
+                                    if id3_title.is_none() {
+                                        id3_title = tag_value(tags, &["title", "TITLE"]);
+                                    }
                                 }
-                            }
-                            _ => {}
+                            },
+                            _ => {},
                         }
                     }
-                    if n_audio > 0 { audio_tracks = Some(n_audio); }
+                    if n_audio > 0 {
+                        audio_tracks = Some(n_audio);
+                    }
                 }
             }
         }
@@ -466,7 +498,8 @@ fn format_fraction_fps(frac: &str) -> String {
                 return format!("{:.3}", fps)
                     .trim_end_matches('0')
                     .trim_end_matches('.')
-                    .to_string() + " fps";
+                    .to_string()
+                    + " fps";
             }
         }
     }
@@ -547,7 +580,7 @@ fn pdf_info_string(dict: &lopdf::Dictionary, key: &[u8]) -> Option<String> {
             } else {
                 String::from_utf8(bytes.clone()).ok()
             }
-        }
+        },
         _ => None,
     }
 }
@@ -601,9 +634,13 @@ fn parse_obj(path: &Path) -> (Option<u64>, Option<u64>, Option<u32>) {
     let mut faces: u64 = 0;
     let mut mats: u32 = 0;
     for line in content.lines() {
-        if line.starts_with("v ") { verts += 1; }
-        else if line.starts_with("f ") { faces += 1; }
-        else if line.starts_with("mtllib ") { mats += 1; }
+        if line.starts_with("v ") {
+            verts += 1;
+        } else if line.starts_with("f ") {
+            faces += 1;
+        } else if line.starts_with("mtllib ") {
+            mats += 1;
+        }
     }
     (
         if verts > 0 { Some(verts) } else { None },
@@ -622,7 +659,10 @@ fn parse_stl(path: &Path) -> (Option<u64>, Option<u64>, Option<u32>) {
     if header.starts_with(b"solid") {
         // ASCII STL: count "facet normal" lines
         let content = fs::read_to_string(path).unwrap_or_default();
-        let faces = content.lines().filter(|l| l.trim_start().starts_with("facet normal")).count() as u64;
+        let faces = content
+            .lines()
+            .filter(|l| l.trim_start().starts_with("facet normal"))
+            .count() as u64;
         // Each face has 3 vertices
         let verts = faces * 3;
         return (
@@ -665,11 +705,17 @@ fn parse_glb(path: &Path) -> (Option<u64>, Option<u64>, Option<u32>) {
         Ok(d) => d,
         Err(_) => return (None, None, None),
     };
-    if data.len() < 20 { return (None, None, None); }
+    if data.len() < 20 {
+        return (None, None, None);
+    }
     let json_len = u32::from_le_bytes([data[12], data[13], data[14], data[15]]) as usize;
     let json_start = 20usize;
-    if json_start + json_len > data.len() { return (None, None, None); }
-    if let Ok(json) = serde_json::from_slice::<serde_json::Value>(&data[json_start..json_start + json_len]) {
+    if json_start + json_len > data.len() {
+        return (None, None, None);
+    }
+    if let Ok(json) =
+        serde_json::from_slice::<serde_json::Value>(&data[json_start..json_start + json_len])
+    {
         return gltf_json_counts(&json);
     }
     (None, None, None)
@@ -697,7 +743,11 @@ fn gltf_json_counts(json: &serde_json::Value) -> (Option<u64>, Option<u64>, Opti
     // Return primitive count as a rough face proxy
     (
         None, // vertex count: would require loading binary buffer
-        if total_prims > 0 { Some(total_prims) } else { None },
+        if total_prims > 0 {
+            Some(total_prims)
+        } else {
+            None
+        },
         materials,
     )
 }
@@ -832,14 +882,14 @@ fn convert_image_to_png(path: String) -> Result<String, String> {
 #[command]
 fn open_file_dialog() -> Option<String> {
     rfd::FileDialog::new()
-        .add_filter("Media", &[
-            "png", "jpg", "jpeg", "gif", "webp", "bmp", "ico", "svg", "avif",
-            "heic", "heif", "tiff", "tif", "raw", "psd",
-            "mp4", "mkv", "webm", "avi", "mov", "m4v",
-            "mp3", "flac", "ogg", "wav", "aac", "m4a", "opus",
-            "pdf",
-            "obj", "gltf", "glb", "stl",
-        ])
+        .add_filter(
+            "Media",
+            &[
+                "png", "jpg", "jpeg", "gif", "webp", "bmp", "ico", "svg", "avif", "heic", "heif",
+                "tiff", "tif", "raw", "psd", "mp4", "mkv", "webm", "avi", "mov", "m4v", "mp3",
+                "flac", "ogg", "wav", "aac", "m4a", "opus", "pdf", "obj", "gltf", "glb", "stl",
+            ],
+        )
         .add_filter("All files", &["*"])
         .pick_file()
         .map(|p| p.to_string_lossy().to_string())
@@ -890,13 +940,19 @@ fn list_dir_files(dir: String, category: String) -> Vec<String> {
     };
 
     // Normalize category group: image + image_convert both treated as "image"
-    let group = if category == "image_convert" { "image" } else { &category };
+    let group = if category == "image_convert" {
+        "image"
+    } else {
+        &category
+    };
 
     let mut files: Vec<String> = entries
         .filter_map(|e| e.ok())
         .filter_map(|e| {
             let p = e.path();
-            if !p.is_file() { return None; }
+            if !p.is_file() {
+                return None;
+            }
             let ext = p.extension()?.to_string_lossy().to_lowercase().to_string();
             let cat = category_for_ext(&ext);
             let cat_group = if cat == "image_convert" { "image" } else { cat };
@@ -962,7 +1018,9 @@ fn handle_stream(req: tauri::http::Request<Vec<u8>>) -> tauri::http::Response<Ve
                     .ok()?
                     .min(file_size.saturating_sub(1))
             };
-            if start > end { return None; }
+            if start > end {
+                return None;
+            }
             Some((start, end))
         });
 

@@ -348,8 +348,7 @@ pub fn run() {
         blocklist_json, PRIVACY_INIT_SCRIPT, TOOLBAR_INIT_SCRIPT
     );
 
-    let session_dir =
-        std::env::temp_dir().join(format!("ghost-session-{}", std::process::id()));
+    let session_dir = std::env::temp_dir().join(format!("ghost-session-{}", std::process::id()));
 
     tauri::Builder::default()
         .manage(AppState::new(blocklist))
@@ -367,8 +366,7 @@ pub fn run() {
             clear_browsing_data,
         ])
         .setup(move |app| {
-            std::fs::create_dir_all(&session_dir)
-                .expect("failed to create ghost session dir");
+            std::fs::create_dir_all(&session_dir).expect("failed to create ghost session dir");
 
             let config = app.config();
             let win_config = config.app.windows.first().cloned().unwrap_or_else(|| {
@@ -387,42 +385,39 @@ pub fn run() {
             let window = tauri::WebviewWindowBuilder::from_config(app, &win_config)?
                 .initialization_script(&combined_init)
                 .data_directory(session_dir.clone())
-                .on_download(|webview, event| {
-                    match event {
-                        DownloadEvent::Requested {
-                            url: _,
-                            destination,
-                        } => {
-                            let home = std::env::var("HOME")
-                                .unwrap_or_else(|_| "/tmp".to_string());
-                            let filename = destination
-                                .file_name()
+                .on_download(|webview, event| match event {
+                    DownloadEvent::Requested {
+                        url: _,
+                        destination,
+                    } => {
+                        let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
+                        let filename = destination
+                            .file_name()
+                            .and_then(|n| n.to_str())
+                            .unwrap_or("download")
+                            .to_string();
+                        *destination = std::path::PathBuf::from(&home)
+                            .join("Downloads")
+                            .join(&filename);
+                        true
+                    },
+                    DownloadEvent::Finished {
+                        url: _,
+                        path,
+                        success,
+                    } => {
+                        if success {
+                            let filename = path
+                                .as_ref()
+                                .and_then(|p| p.file_name())
                                 .and_then(|n| n.to_str())
-                                .unwrap_or("download")
+                                .unwrap_or("file")
                                 .to_string();
-                            *destination = std::path::PathBuf::from(&home)
-                                .join("Downloads")
-                                .join(&filename);
-                            true
+                            let _ = webview.emit("download-complete", filename);
                         }
-                        DownloadEvent::Finished {
-                            url: _,
-                            path,
-                            success,
-                        } => {
-                            if success {
-                                let filename = path
-                                    .as_ref()
-                                    .and_then(|p| p.file_name())
-                                    .and_then(|n| n.to_str())
-                                    .unwrap_or("file")
-                                    .to_string();
-                                let _ = webview.emit("download-complete", filename);
-                            }
-                            false
-                        }
-                        _ => true,
-                    }
+                        false
+                    },
+                    _ => true,
                 })
                 .build()?;
 
@@ -467,21 +462,15 @@ pub fn run() {
         .run(|_app, event| {
             if let tauri::RunEvent::Exit = event {
                 let pid = std::process::id();
-                let session_dir =
-                    std::env::temp_dir().join(format!("ghost-session-{}", pid));
+                let session_dir = std::env::temp_dir().join(format!("ghost-session-{}", pid));
                 std::fs::remove_dir_all(&session_dir).ok();
 
                 #[cfg(target_os = "linux")]
                 {
                     if let Ok(home) = std::env::var("HOME") {
-                        std::fs::remove_dir_all(format!(
-                            "{home}/.cache/ghost-session-{pid}"
-                        ))
-                        .ok();
-                        std::fs::remove_dir_all(format!(
-                            "{home}/.local/share/ghost-session-{pid}"
-                        ))
-                        .ok();
+                        std::fs::remove_dir_all(format!("{home}/.cache/ghost-session-{pid}")).ok();
+                        std::fs::remove_dir_all(format!("{home}/.local/share/ghost-session-{pid}"))
+                            .ok();
                     }
                 }
             }
@@ -535,7 +524,10 @@ mod tests {
     #[test]
     fn blocklist_loads_from_json() {
         let list = load_blocklist();
-        assert!(list.len() >= 10, "blocklist should have at least 10 entries");
+        assert!(
+            list.len() >= 10,
+            "blocklist should have at least 10 entries"
+        );
         assert!(
             list.contains("google-analytics.com"),
             "google-analytics.com must be in blocklist"

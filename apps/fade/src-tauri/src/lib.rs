@@ -235,7 +235,7 @@ pub fn build_image_magick_args(input: &str, output: &str, opts: &ConvertOptions)
             let pct = opts.resize_percent.unwrap_or(100);
             args.push("-resize".to_string());
             args.push(format!("{}%", pct));
-        }
+        },
         Some("pixels") => {
             let w = opts.resize_width.unwrap_or(0);
             let h = opts.resize_height.unwrap_or(0);
@@ -249,8 +249,8 @@ pub fn build_image_magick_args(input: &str, output: &str, opts: &ConvertOptions)
                 args.push("-resize".to_string());
                 args.push(format!("x{}", h));
             }
-        }
-        _ => {}
+        },
+        _ => {},
     }
 
     if let Some(deg) = opts.rotation {
@@ -287,7 +287,11 @@ pub fn build_ffmpeg_video_args(input: &str, output: &str, opts: &ConvertOptions)
     args.extend(["-i".to_string(), input.to_string()]);
 
     if let Some(t) = opts.trim_end {
-        let end = if let Some(ss) = opts.trim_start { t - ss } else { t };
+        let end = if let Some(ss) = opts.trim_start {
+            t - ss
+        } else {
+            t
+        };
         args.extend(["-t".to_string(), end.to_string()]);
     }
 
@@ -343,7 +347,11 @@ pub fn build_ffmpeg_audio_args(input: &str, output: &str, opts: &ConvertOptions)
     args.extend(["-i".to_string(), input.to_string()]);
 
     if let Some(t) = opts.trim_end {
-        let end = if let Some(ss) = opts.trim_start { t - ss } else { t };
+        let end = if let Some(ss) = opts.trim_start {
+            t - ss
+        } else {
+            t
+        };
         args.extend(["-t".to_string(), end.to_string()]);
     }
 
@@ -409,15 +417,15 @@ fn resolution_to_scale(res: &str) -> String {
         "1920x1080" => {
             "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2"
                 .to_string()
-        }
+        },
         "1280x720" => {
             "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2"
                 .to_string()
-        }
+        },
         "854x480" => {
             "scale=854:480:force_original_aspect_ratio=decrease,pad=854:480:(ow-iw)/2:(oh-ih)/2"
                 .to_string()
-        }
+        },
         other => format!("scale={}", other),
     }
 }
@@ -471,8 +479,7 @@ fn get_file_info(path: String) -> Result<FileInfo, String> {
         .output()
         .map_err(|e| e.to_string())?;
 
-    let json: serde_json::Value =
-        serde_json::from_slice(&out.stdout).map_err(|e| e.to_string())?;
+    let json: serde_json::Value = serde_json::from_slice(&out.stdout).map_err(|e| e.to_string())?;
 
     let duration_secs = json["format"]["duration"]
         .as_str()
@@ -600,14 +607,25 @@ fn convert_file(
         let output_path_clone = output_path.clone();
         match result {
             Ok(()) => {
-                write_fade_log(&format_log_entry(&job_id, &input_path, "done", &output_path));
-                let _ = window.emit("job-done", JobDone { job_id, output_path });
-            }
+                write_fade_log(&format_log_entry(
+                    &job_id,
+                    &input_path,
+                    "done",
+                    &output_path,
+                ));
+                let _ = window.emit(
+                    "job-done",
+                    JobDone {
+                        job_id,
+                        output_path,
+                    },
+                );
+            },
             Err(msg) if msg == "CANCELLED" => {
                 let _ = std::fs::remove_file(&output_path_clone);
                 write_fade_log(&format_log_entry(&job_id, &input_path, "cancelled", ""));
                 let _ = window.emit("job-cancelled", JobCancelled { job_id });
-            }
+            },
             Err(msg) => {
                 let first_line = msg.lines().next().unwrap_or("").to_string();
                 write_fade_log(&format_log_entry(
@@ -616,8 +634,14 @@ fn convert_file(
                     "error",
                     &first_line,
                 ));
-                let _ = window.emit("job-error", JobError { job_id, message: msg });
-            }
+                let _ = window.emit(
+                    "job-error",
+                    JobError {
+                        job_id,
+                        message: msg,
+                    },
+                );
+            },
         }
     });
 
