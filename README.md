@@ -1,47 +1,46 @@
-# The Freedom Apps
+# Libre-Apps — Shared Code & Engineering Standards
 
-A minimal set of reliable, lightweight apps for [LibreWin OS](https://github.com/AncientKing37/Librewin-OS). These aren't trying to compete with the software you'll install later — they're a dependable foundation that works offline, on any hardware, from day one, with a wide range of compatibility.
+This repo holds the **shared foundation** for the Libre family of apps (Shelf, Stack, Prism, Fade, Ghost, etc.). As of April 2026, each app lives in its own standalone repo; this repo now hosts the code and standards they all depend on.
 
-Built with **Tauri 2 + Rust + Svelte 5**. No Electron. No Node runtime. ~3MB per binary.
+## What lives here
 
----
+- **`common/`** — `librewin-common`, the shared Rust crate (Tauri helpers, config, media, OS, window, xattr). Consumed by each app as a Cargo git dependency pinned to a SHA.
+- **`common-js/`** — `@libre/ui`, the shared Svelte 5 component library and design tokens. Currently **vendored** into each app repo as a snapshot (npm's git-subdir story is poor). Treat this repo as the source of truth; sync into apps when it changes.
+- **`docs/`** — shared engineering and signing specs that all apps inherit.
+- **Standards** — lint config, `rust-toolchain.toml`, `eslint.config.mjs`, `justfile`, etc. that every app repo should mirror.
 
-### Shelf — File Manager
-Your filesystem, your way. Tags backed by extended attributes, dual-pane layout, multi-tab, keyboard-driven navigation, instant search. Global Super+E shortcut summons it from anywhere. Archive browsing/extraction (ZIP, 7Z, TAR) coming in v0.2. Quick media conversion via Fade presets.
+## The apps
 
-### Stack — Markdown Editor
-The note-taking app that gets out of your way. Opens instantly, saves automatically, speaks Markdown natively. CodeMirror 6 editor with live outline, multi-tab, export to HTML/TXT/PDF. The modern Notepad you always wanted.
+Each app is now its own private repo under `eldo9000`:
 
-### Prism — Media Viewer
-Open anything. Images, video, audio, PDFs, 3D models, and hundreds of other formats — all in one app, no plugins, no codecs to hunt down. Think macOS Quick Look, but for everything.
+| App | Repo | Description |
+|-----|------|-------------|
+| Shelf | [Shelf-App](https://github.com/eldo9000/Shelf-App) | File manager with xattr tags, dual-pane, keyboard-first |
+| Stack | [Stack-App](https://github.com/eldo9000/Stack-App) | Markdown editor — the modern Notepad |
+| Prism | [Prism-App](https://github.com/eldo9000/Prism-App) | Universal media viewer (images, video, audio, PDFs, 3D) |
+| Fade  | [Fade-App](https://github.com/eldo9000/Fade-App)   | Media converter powered by FFmpeg |
+| Ghost | [Ghost-App](https://github.com/eldo9000/Ghost-App) | Privacy browser — stateless, fingerprint-randomized |
 
-### Fade — Media Converter
-Convert, resize, and process media without leaving your desktop. Convert a 200MB video to MP4. Batch-resize 50 photos. Extract audio. Right-click in Shelf and pick a preset — it converts in the background while you work. Supports everything FFmpeg does, which is everything.
+Why split? Each app is a standalone product with its own users, releases, and marketing surface. Bundling them in a monorepo buried each app's discovery; now each has its own README, issues, stars, and release stream.
 
-### Ghost — The browser that leaves no imprint
-Every session starts as a new, unrecognizable browser. Randomized fingerprint, spoofed identity, WebRTC disabled — websites don't know who you are and can't connect one visit to another. Not incognito (that just clears local history). Ghost changes what the web sees about you. Stateless by default, always there, starts instantly.
+## Using the shared crate
 
----
+In an app's `src-tauri/Cargo.toml`:
 
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Framework | Tauri 2 |
-| Frontend | Svelte 5 + Tailwind CSS 4 |
-| Backend | Rust (edition 2021) |
-| Build | Vite 8 |
-| Font | Geist |
-
-## Development
-
-```bash
-cd apps/{shelf,stack,prism,fade,ghost}
-npm install
-npm run tauri dev
+```toml
+[dependencies]
+librewin-common = { git = "https://github.com/eldo9000/Libre-Apps.git", rev = "<pinned-sha>" }
 ```
 
-Requires: Rust 1.77+, Node 22+.
+Bump the `rev` deliberately when you want to pull updates.
+
+## Using the shared UI package
+
+Each app repo vendors `common-js/` at the root and references it via `"@libre/ui": "file:./common-js"` in `package.json`. When this source changes, re-sync into each app repo (a helper script lives in `scripts/` — TODO).
+
+## Tech stack
+
+Tauri 2 · Rust 2021 · Svelte 5 · Tailwind 4 · Vite 8 · Geist font.
 
 ## Verifying releases
 
@@ -52,14 +51,7 @@ All release binaries and `.desktop` files are signed with [minisign](https://jed
 RWSvBX8a5MExBbOsCmBqDLxNBb8ofBef1k3eqI79Z/LSGp/DBj1YwW5S
 ```
 
-```bash
-# Install minisign, then:
-minisign -Vm shelf-x86_64 -P RWSvBX8a5MExBbOsCmBqDLxNBb8ofBef1k3eqI79Z/LSGp/DBj1YwW5S
-```
-
-Each release includes `{app}-{arch}.minisig` files alongside every binary and `.desktop` file.
-See [docs/specs/SIGNING.md](docs/specs/SIGNING.md) for the full signing infrastructure and key
-rotation policy.
+See [docs/specs/SIGNING.md](docs/specs/SIGNING.md) for the full signing infrastructure and key rotation policy.
 
 ## License
 
