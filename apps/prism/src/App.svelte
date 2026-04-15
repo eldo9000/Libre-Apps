@@ -3,9 +3,11 @@
   import MediaViewer from './lib/MediaViewer.svelte';
 
   let filename = $state('Prism');
+  let filepath = $state('');
 
-  function onFileLoaded(name) {
+  function onFileLoaded(name, path) {
     filename = name;
+    filepath = path || '';
   }
 </script>
 
@@ -22,7 +24,17 @@
         <path d="M14 13.5v3l2.5 -1.5l-2.5 -1.5" />
         <path d="M7 6v.01" />
       </svg>
-      <span class="text-[13px] font-medium text-gray-700 dark:text-gray-300 truncate">{filename}</span>
+      <span
+        class="text-[13px] font-medium text-gray-700 dark:text-gray-300 truncate"
+        title={filepath || filename}
+      >{filename}</span>
+      {#if filepath}
+        <span
+          class="text-[11px] text-gray-400 dark:text-gray-500 truncate max-w-[240px] hidden sm:block"
+          title={filepath}
+          data-tauri-drag-region
+        >{filepath}</span>
+      {/if}
     </div>
   </Titlebar>
 
