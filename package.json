@@ -3,5 +3,24 @@
   "private": true,
   "workspaces": [
     "apps/*"
-  ]
+  ],
+  "scripts": {
+    "lint": "eslint 'apps/*/src/**/*.{js,svelte}' 'apps/common-js/src/**/*.{js,svelte}'",
+    "lint:css": "stylelint 'apps/*/src/**/*.{svelte,css}' 'apps/common-js/src/**/*.{svelte,css}'",
+    "fmt": "prettier --write 'apps/*/src/**/*.{js,svelte}' 'apps/common-js/src/**/*.{js,svelte}'"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9",
+    "eslint": "^9",
+    "eslint-plugin-svelte": "^2.46",
+    "globals": "^15",
+    "postcss-html": "^1",
+    "prettier": "^3",
+    "prettier-plugin-svelte": "^3",
+    "stylelint": "^16",
+    "stylelint-config-html": "^1",
+    "stylelint-config-standard": "^36",
+    "svelte": "^5",
+    "svelte-eslint-parser": "^0.43"
+  }
 }
