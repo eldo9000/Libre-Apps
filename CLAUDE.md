@@ -177,6 +177,38 @@ document.documentElement.style.setProperty('--accent', accent);
 
 ---
 
+## Known Patterns & Gotchas
+
+Non-obvious permanent truths about this codebase. Add immediately when discovered — never wait until session end.
+
+**Accent color is `#0066cc`, not `#297acc`.**
+`#297acc` was the old erroneous default. Any CSS `:root` block or Rust `get_accent` fallback still using `#297acc` is a bug. Search for it before shipping.
+
+**Never hold a Mutex lock while spawning a thread in Tauri commands.**
+Extract the data you need, drop the lock, then spawn. Holding the lock across `thread::spawn` or `tokio::spawn` causes deadlocks on re-entrant IPC calls. The code pattern in "Shared Patterns → Tauri 2 Commands" above is the correct reference.
+
+**Svelte 5 runes only — no legacy reactive syntax.**
+Never use `$:`, `createEventDispatcher`, or `export let` in any component. Only `$state`, `$derived`, `$effect`, `$props`, `$bindable`. The compiler won't always error on legacy syntax mixed with runes — it silently misbehaves.
+
+**Custom titlebar requires four things in lockstep: `decorations: false` + `transparent: true` + 10px border-radius + drop shadow.**
+Missing any one causes visual breakage. `decorations: false` without `transparent: true` leaves a white flash on open. Border-radius without a drop shadow looks disconnected on light backgrounds. All four must be set per-app in `tauri.conf.json` and the app CSS.
+
+**Theme sync reads from `~/.config/librewin/theme` and `~/.config/librewin/accent` via `librewin_common` helpers.**
+Do not read these files directly from app code — use `get_theme()` and `get_accent()` IPC commands backed by librewin_common. This ensures consistent fallback behavior (`light` / `#0066cc`) across all apps.
+
+**Linux dev renderer is WebKit2GTK 4.1 — declare all system deps in `tauri.conf.json`.**
+Undeclared deps install fine on dev machines (already present) but break in CI and ISO builds. macOS uses a different WebKit — Linux-specific rendering bugs won't surface in `tauri dev` on macOS.
+
+**Fade: FFmpeg and ImageMagick must be in PATH — Tauri does not bundle them.**
+On macOS dev, set PATH explicitly in the shell that runs `tauri dev`. On Linux, ensure packages are declared in the `.desktop` file's `# Runtime OS packages:` comment and in `LibreWin-OS/build/modules/packages.sh`. A missing binary produces a cryptic "command not found" from inside the Rust process, not a Tauri error.
+
+**`$effect` cleanup must always return the unlisten function — not call it.**
+`return () => { unlisten.then(f => f()); }` — the cleanup runs when the component unmounts. Forgetting the return leaks event listeners and causes ghost event handlers after navigation.
+
+<!-- Add new entries below this line -->
+
+---
+
 ## Cross-Platform Notes
 
 - **Linux (primary):** WebKit2GTK 4.1 renderer. Declare system deps in `tauri.conf.json`. FFmpeg/ImageMagick must be in PATH.
