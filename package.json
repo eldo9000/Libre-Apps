@@ -5,9 +5,9 @@
     "apps/*"
   ],
   "scripts": {
-    "lint": "eslint 'apps/*/src/**/*.{js,svelte}' 'apps/common-js/src/**/*.{js,svelte}'",
-    "lint:css": "stylelint 'apps/*/src/**/*.{svelte,css}' 'apps/common-js/src/**/*.{svelte,css}'",
-    "fmt": "prettier --write 'apps/*/src/**/*.{js,svelte}' 'apps/common-js/src/**/*.{js,svelte}'"
+    "lint": "eslint 'common-js/src/**/*.{js,svelte}'",
+    "lint:css": "stylelint 'common-js/src/**/*.{svelte,css}'",
+    "fmt": "prettier --write 'common-js/src/**/*.{js,svelte}'"
   },
   "devDependencies": {
     "@eslint/js": "^9",
