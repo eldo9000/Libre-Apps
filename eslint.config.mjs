@@ -23,7 +23,7 @@ export default [
 
   // ── Plain JS files ──────────────────────────────────────────────────────
   {
-    files: ['apps/*/src/**/*.js', 'apps/common-js/src/**/*.js'],
+    files: ['apps/*/src/**/*.js', 'common-js/src/**/*.js'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',
@@ -52,7 +52,7 @@ export default [
 
   // ── Svelte component files ───────────────────────────────────────────────
   {
-    files: ['apps/*/src/**/*.svelte', 'apps/common-js/src/**/*.svelte'],
+    files: ['apps/*/src/**/*.svelte', 'common-js/src/**/*.svelte'],
     languageOptions: {
       parser: svelteParser,
       ecmaVersion: 2022,
