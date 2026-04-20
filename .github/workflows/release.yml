@@ -20,7 +20,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        app: [shelf, prism, stack, ghost, fade]
+        include:
+          - { app: shelf, repo: Shelf-App }
+          - { app: prism, repo: Prism-App }
+          - { app: stack, repo: Stack-App }
+          - { app: ghost, repo: Ghost-App }
+          - { app: fade,  repo: Fade-App  }
 
     steps:
       - name: Checkout
@@ -41,10 +46,20 @@ jobs:
             libjavascriptcoregtk-4.1-dev \
             minisign
 
+      - name: Verify CARGO_DEPS_TOKEN can read ${{ matrix.repo }}
+        env:
+          GH_TOKEN: ${{ secrets.CARGO_DEPS_TOKEN }}
+        run: |
+          if ! gh api "repos/eldo9000/${{ matrix.repo }}" --silent 2>/dev/null; then
+            echo "::error::CARGO_DEPS_TOKEN cannot read eldo9000/${{ matrix.repo }}."
+            echo "::error::Rotate the token or grant it repo-read scope for this repo."
+            exit 1
+          fi
+
       - name: Checkout ${{ matrix.app }} source
         uses: actions/checkout@v6
         with:
-          repository: eldo9000/${{ matrix.app }}-App
+          repository: eldo9000/${{ matrix.repo }}
           token: ${{ secrets.CARGO_DEPS_TOKEN }}
           path: apps/${{ matrix.app }}
 
@@ -115,7 +130,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        app: [shelf, prism, stack, ghost, fade]
+        include:
+          - { app: shelf, repo: Shelf-App }
+          - { app: prism, repo: Prism-App }
+          - { app: stack, repo: Stack-App }
+          - { app: ghost, repo: Ghost-App }
+          - { app: fade,  repo: Fade-App  }
 
     steps:
       - name: Checkout
@@ -136,10 +156,20 @@ jobs:
             libjavascriptcoregtk-4.1-dev \
             minisign
 
+      - name: Verify CARGO_DEPS_TOKEN can read ${{ matrix.repo }}
+        env:
+          GH_TOKEN: ${{ secrets.CARGO_DEPS_TOKEN }}
+        run: |
+          if ! gh api "repos/eldo9000/${{ matrix.repo }}" --silent 2>/dev/null; then
+            echo "::error::CARGO_DEPS_TOKEN cannot read eldo9000/${{ matrix.repo }}."
+            echo "::error::Rotate the token or grant it repo-read scope for this repo."
+            exit 1
+          fi
+
       - name: Checkout ${{ matrix.app }} source
         uses: actions/checkout@v6
         with:
-          repository: eldo9000/${{ matrix.app }}-App
+          repository: eldo9000/${{ matrix.repo }}
           token: ${{ secrets.CARGO_DEPS_TOKEN }}
           path: apps/${{ matrix.app }}
 
@@ -217,10 +247,37 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends minisign
 
+      - name: Verify CARGO_DEPS_TOKEN can read all app repos
+        env:
+          GH_TOKEN: ${{ secrets.CARGO_DEPS_TOKEN }}
+        run: |
+          declare -A REPOS=(
+            [shelf]=Shelf-App
+            [stack]=Stack-App
+            [prism]=Prism-App
+            [fade]=Fade-App
+            [ghost]=Ghost-App
+          )
+          failed=0
+          for app in "${!REPOS[@]}"; do
+            if ! gh api "repos/eldo9000/${REPOS[$app]}" --silent 2>/dev/null; then
+              echo "::error::CARGO_DEPS_TOKEN cannot read eldo9000/${REPOS[$app]} (app=$app)"
+              failed=1
+            fi
+          done
+          [ $failed -eq 0 ] || { echo "::error::Rotate CARGO_DEPS_TOKEN or grant repo-read scope."; exit 1; }
+
       - name: Checkout app sources
         run: |
-          for app in shelf prism stack ghost fade; do
-            gh repo clone eldo9000/${app^}-App apps/$app -- --depth=1
+          declare -A REPOS=(
+            [shelf]=Shelf-App
+            [stack]=Stack-App
+            [prism]=Prism-App
+            [fade]=Fade-App
+            [ghost]=Ghost-App
+          )
+          for app in "${!REPOS[@]}"; do
+            gh repo clone "eldo9000/${REPOS[$app]}" "apps/$app" -- --depth=1
           done
         env:
           GH_TOKEN: ${{ secrets.CARGO_DEPS_TOKEN }}
@@ -278,10 +335,37 @@ jobs:
       - name: Install Syft
         uses: anchore/sbom-action/download-syft@v0
 
+      - name: Verify CARGO_DEPS_TOKEN can read all app repos
+        env:
+          GH_TOKEN: ${{ secrets.CARGO_DEPS_TOKEN }}
+        run: |
+          declare -A REPOS=(
+            [shelf]=Shelf-App
+            [stack]=Stack-App
+            [prism]=Prism-App
+            [fade]=Fade-App
+            [ghost]=Ghost-App
+          )
+          failed=0
+          for app in "${!REPOS[@]}"; do
+            if ! gh api "repos/eldo9000/${REPOS[$app]}" --silent 2>/dev/null; then
+              echo "::error::CARGO_DEPS_TOKEN cannot read eldo9000/${REPOS[$app]} (app=$app)"
+              failed=1
+            fi
+          done
+          [ $failed -eq 0 ] || { echo "::error::Rotate CARGO_DEPS_TOKEN or grant repo-read scope."; exit 1; }
+
       - name: Checkout app sources
         run: |
-          for app in shelf prism stack ghost fade; do
-            gh repo clone eldo9000/${app^}-App apps/$app -- --depth=1
+          declare -A REPOS=(
+            [shelf]=Shelf-App
+            [stack]=Stack-App
+            [prism]=Prism-App
+            [fade]=Fade-App
+            [ghost]=Ghost-App
+          )
+          for app in "${!REPOS[@]}"; do
+            gh repo clone "eldo9000/${REPOS[$app]}" "apps/$app" -- --depth=1
           done
         env:
           GH_TOKEN: ${{ secrets.CARGO_DEPS_TOKEN }}
@@ -339,10 +423,37 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends minisign
 
+      - name: Verify CARGO_DEPS_TOKEN can read all app repos
+        env:
+          GH_TOKEN: ${{ secrets.CARGO_DEPS_TOKEN }}
+        run: |
+          declare -A REPOS=(
+            [shelf]=Shelf-App
+            [stack]=Stack-App
+            [prism]=Prism-App
+            [fade]=Fade-App
+            [ghost]=Ghost-App
+          )
+          failed=0
+          for app in "${!REPOS[@]}"; do
+            if ! gh api "repos/eldo9000/${REPOS[$app]}" --silent 2>/dev/null; then
+              echo "::error::CARGO_DEPS_TOKEN cannot read eldo9000/${REPOS[$app]} (app=$app)"
+              failed=1
+            fi
+          done
+          [ $failed -eq 0 ] || { echo "::error::Rotate CARGO_DEPS_TOKEN or grant repo-read scope."; exit 1; }
+
       - name: Checkout app sources
         run: |
-          for app in shelf prism stack ghost fade; do
-            gh repo clone eldo9000/${app^}-App apps/$app -- --depth=1
+          declare -A REPOS=(
+            [shelf]=Shelf-App
+            [stack]=Stack-App
+            [prism]=Prism-App
+            [fade]=Fade-App
+            [ghost]=Ghost-App
+          )
+          for app in "${!REPOS[@]}"; do
+            gh repo clone "eldo9000/${REPOS[$app]}" "apps/$app" -- --depth=1
           done
         env:
           GH_TOKEN: ${{ secrets.CARGO_DEPS_TOKEN }}
