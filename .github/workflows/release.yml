@@ -24,7 +24,6 @@ jobs:
           - { app: shelf, repo: Shelf-App }
           - { app: prism, repo: Prism-App }
           - { app: stack, repo: Stack-App }
-          - { app: ghost, repo: Ghost-App }
           - { app: fade,  repo: Fade-App  }
 
     steps:
@@ -140,7 +139,6 @@ jobs:
           - { app: shelf, repo: Shelf-App }
           - { app: prism, repo: Prism-App }
           - { app: stack, repo: Stack-App }
-          - { app: ghost, repo: Ghost-App }
           - { app: fade,  repo: Fade-App  }
 
     steps:
@@ -268,7 +266,6 @@ jobs:
             [stack]=Stack-App
             [prism]=Prism-App
             [fade]=Fade-App
-            [ghost]=Ghost-App
           )
           failed=0
           for app in "${!REPOS[@]}"; do
@@ -286,7 +283,6 @@ jobs:
             [stack]=Stack-App
             [prism]=Prism-App
             [fade]=Fade-App
-            [ghost]=Ghost-App
           )
           for app in "${!REPOS[@]}"; do
             gh repo clone "eldo9000/${REPOS[$app]}" "apps/$app" -- --depth=1
@@ -297,7 +293,7 @@ jobs:
       - name: Bundle .desktop files
         run: |
           mkdir -p desktop-files
-          for app in shelf prism stack ghost fade; do
+          for app in shelf prism stack fade; do
             SRC="apps/$app/io.librewin.$app.desktop"
             if [[ -f "$SRC" ]]; then
               cp "$SRC" "desktop-files/$app.desktop"
@@ -356,7 +352,6 @@ jobs:
             [stack]=Stack-App
             [prism]=Prism-App
             [fade]=Fade-App
-            [ghost]=Ghost-App
           )
           failed=0
           for app in "${!REPOS[@]}"; do
@@ -374,7 +369,6 @@ jobs:
             [stack]=Stack-App
             [prism]=Prism-App
             [fade]=Fade-App
-            [ghost]=Ghost-App
           )
           for app in "${!REPOS[@]}"; do
             gh repo clone "eldo9000/${REPOS[$app]}" "apps/$app" -- --depth=1
@@ -385,7 +379,7 @@ jobs:
       - name: Generate SBOMs
         run: |
           mkdir -p sbom
-          for app in shelf stack prism fade ghost; do
+          for app in shelf stack prism fade; do
             echo "Generating SBOM: $app"
             syft "apps/$app" \
               --output cyclonedx-json \
@@ -444,7 +438,6 @@ jobs:
             [stack]=Stack-App
             [prism]=Prism-App
             [fade]=Fade-App
-            [ghost]=Ghost-App
           )
           failed=0
           for app in "${!REPOS[@]}"; do
@@ -462,7 +455,6 @@ jobs:
             [stack]=Stack-App
             [prism]=Prism-App
             [fade]=Fade-App
-            [ghost]=Ghost-App
           )
           for app in "${!REPOS[@]}"; do
             gh repo clone "eldo9000/${REPOS[$app]}" "apps/$app" -- --depth=1
@@ -475,7 +467,7 @@ jobs:
           python3 - <<'PYEOF'
           import json, sys, os, datetime
 
-          apps = ['shelf', 'stack', 'prism', 'fade', 'ghost']
+          apps = ['shelf', 'stack', 'prism', 'fade']
           git_ref  = os.environ.get('GITHUB_REF_NAME', 'unknown')
           git_sha  = os.environ.get('GITHUB_SHA', 'unknown')[:8]
           build_date = datetime.date.today().isoformat()
