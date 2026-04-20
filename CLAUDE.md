@@ -58,7 +58,7 @@ justfile           top-level build orchestration
 keys/              minisign signing metadata
 ```
 
-**Note:** `package.json` still lists `apps/*` in `workspaces` for historical reasons. The lint globs target `common-js/src/**` only. If you see an empty `apps/` show up, it's just stale local directories — do not commit files into it.
+**Note:** `package.json` intentionally omits `"workspaces"`. A stale `"workspaces": ["apps/*"]` declaration used to live here (left over from the pre-split monorepo) and broke downstream CI: release.yml checks out app repos into `apps/{name}/`, and an ancestor `workspaces` declaration made npm treat them as workspace members, which mis-resolved `@libre/ui: file:./common-js` as a registry dep. Removed 2026-04-20. If you see an empty `apps/` show up locally, it's just stale build directories — do not commit files into it.
 
 ---
 
