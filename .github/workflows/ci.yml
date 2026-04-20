@@ -10,7 +10,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  # ── Rust checks ──────────────────────────────────────────────────────────
+  # ── Rust checks (common/ workspace only) ─────────────────────────────────
   rust-check:
     name: Rust check
     runs-on: ubuntu-latest
@@ -36,22 +36,18 @@ jobs:
       - name: Set up Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          cache-workspaces: apps
+          cache-workspaces: .
 
       - name: cargo check
-        working-directory: apps
         run: cargo check --workspace
 
       - name: cargo clippy
-        working-directory: apps
         run: cargo clippy --workspace -- -D warnings
 
       - name: cargo fmt
-        working-directory: apps
         run: cargo fmt --check --all
 
       - name: cargo test
-        working-directory: apps
         run: cargo test --workspace
 
   # ── Linters ──────────────────────────────────────────────────────────────
@@ -82,45 +78,10 @@ jobs:
       - name: Set up Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          cache-workspaces: apps
+          cache-workspaces: .
 
       - name: cargo fmt --check
-        working-directory: apps
         run: cargo fmt --check --all
 
       - name: cargo clippy (workspace lints)
-        working-directory: apps
         run: cargo clippy --workspace --all-targets -- -D warnings
-
-  # ── Frontend builds ───────────────────────────────────────────────────────
-  frontend-build:
-    name: Frontend build (${{ matrix.app }})
-    runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        app: [shelf, prism, stack, ghost, fade]
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: apps/${{ matrix.app }}/package-lock.json
-
-      - name: Install dependencies
-        working-directory: apps/${{ matrix.app }}
-        run: npm ci
-
-      - name: Build ${{ matrix.app }}
-        working-directory: apps/${{ matrix.app }}
-        run: npm run build
-
-      - name: Test ${{ matrix.app }}
-        working-directory: apps/${{ matrix.app }}
-        run: npm run test

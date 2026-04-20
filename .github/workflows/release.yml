@@ -41,11 +41,18 @@ jobs:
             libjavascriptcoregtk-4.1-dev \
             minisign
 
+      - name: Checkout ${{ matrix.app }} source
+        uses: actions/checkout@v6
+        with:
+          repository: eldo9000/${{ matrix.app }}-App
+          token: ${{ secrets.CARGO_DEPS_TOKEN }}
+          path: apps/${{ matrix.app }}
+
       - name: Set up Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: stable
-          cache-workspaces: apps
+          cache-workspaces: apps/${{ matrix.app }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -64,10 +71,10 @@ jobs:
 
       - name: Locate and rename binary
         run: |
-          BINARY=$(find apps/target/release -maxdepth 1 -name "${{ matrix.app }}" -type f | head -1)
+          BINARY=$(find apps/${{ matrix.app }}/src-tauri/target/release -maxdepth 1 -name "${{ matrix.app }}" -type f | head -1)
           if [[ -z "$BINARY" ]]; then
             echo "ERROR: Could not find binary for ${{ matrix.app }}"
-            find apps/target/release -maxdepth 1 -type f | head -20
+            find apps/${{ matrix.app }}/src-tauri/target/release -maxdepth 1 -type f | head -20
             exit 1
           fi
           echo "Found: $BINARY"
@@ -129,11 +136,18 @@ jobs:
             libjavascriptcoregtk-4.1-dev \
             minisign
 
+      - name: Checkout ${{ matrix.app }} source
+        uses: actions/checkout@v6
+        with:
+          repository: eldo9000/${{ matrix.app }}-App
+          token: ${{ secrets.CARGO_DEPS_TOKEN }}
+          path: apps/${{ matrix.app }}
+
       - name: Set up Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: stable
-          cache-workspaces: apps
+          cache-workspaces: apps/${{ matrix.app }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -152,10 +166,10 @@ jobs:
 
       - name: Locate and rename binary
         run: |
-          BINARY=$(find apps/target/release -maxdepth 1 -name "${{ matrix.app }}" -type f | head -1)
+          BINARY=$(find apps/${{ matrix.app }}/src-tauri/target/release -maxdepth 1 -name "${{ matrix.app }}" -type f | head -1)
           if [[ -z "$BINARY" ]]; then
             echo "ERROR: Could not find binary for ${{ matrix.app }}"
-            find apps/target/release -maxdepth 1 -type f | head -20
+            find apps/${{ matrix.app }}/src-tauri/target/release -maxdepth 1 -type f | head -20
             exit 1
           fi
           echo "Found: $BINARY"
@@ -202,6 +216,14 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends minisign
+
+      - name: Checkout app sources
+        run: |
+          for app in shelf prism stack ghost fade; do
+            gh repo clone eldo9000/${app^}-App apps/$app -- --depth=1
+          done
+        env:
+          GH_TOKEN: ${{ secrets.CARGO_DEPS_TOKEN }}
 
       - name: Bundle .desktop files
         run: |
@@ -256,6 +278,14 @@ jobs:
       - name: Install Syft
         uses: anchore/sbom-action/download-syft@v0
 
+      - name: Checkout app sources
+        run: |
+          for app in shelf prism stack ghost fade; do
+            gh repo clone eldo9000/${app^}-App apps/$app -- --depth=1
+          done
+        env:
+          GH_TOKEN: ${{ secrets.CARGO_DEPS_TOKEN }}
+
       - name: Generate SBOMs
         run: |
           mkdir -p sbom
@@ -308,6 +338,14 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends minisign
+
+      - name: Checkout app sources
+        run: |
+          for app in shelf prism stack ghost fade; do
+            gh repo clone eldo9000/${app^}-App apps/$app -- --depth=1
+          done
+        env:
+          GH_TOKEN: ${{ secrets.CARGO_DEPS_TOKEN }}
 
       - name: Stamp and validate manifests
         run: |
