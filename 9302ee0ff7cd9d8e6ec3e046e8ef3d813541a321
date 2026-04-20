@@ -1,0 +1,6 @@
+app: libre-apps
+state: active
+context: fixed CI workflows after apps/ split — removed frontend-build matrix, wired rust checks to common/ workspace, release.yml now clones each app repo
+deferred: none
+fragile: release.yml assumes CARGO_DEPS_TOKEN has read access to all app repos; also shell app^ capitalization works for all 5 names but would break for multi-word names
+ci: unknown
