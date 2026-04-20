@@ -80,8 +80,14 @@ jobs:
         working-directory: apps/${{ matrix.app }}
         run: npm ci
 
+      - name: Configure git for cargo to fetch librewin-common
+        run: |
+          git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
       - name: Build ${{ matrix.app }}
         working-directory: apps/${{ matrix.app }}
+        env:
+          CARGO_NET_GIT_FETCH_WITH_CLI: 'true'
         run: npx tauri build --no-bundle
 
       - name: Locate and rename binary
@@ -190,8 +196,14 @@ jobs:
         working-directory: apps/${{ matrix.app }}
         run: npm ci
 
+      - name: Configure git for cargo to fetch librewin-common
+        run: |
+          git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
       - name: Build ${{ matrix.app }}
         working-directory: apps/${{ matrix.app }}
+        env:
+          CARGO_NET_GIT_FETCH_WITH_CLI: 'true'
         run: npx tauri build --no-bundle
 
       - name: Locate and rename binary
