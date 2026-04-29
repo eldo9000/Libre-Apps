@@ -42,3 +42,6 @@ apps/*/bin/
 /tmp/
 # Lockfiles
 apps/Cargo.lock
+
+# Internal strategy and design docs — kept private, not for end users
+docs/
