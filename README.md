@@ -1,6 +1,6 @@
 # Libre-Apps — Shared Code & Engineering Standards
 
-This repo holds the **shared foundation** for the Libre family of apps (Shelf, Stack, Prism, Fade, Ghost, etc.). As of April 2026, each app lives in its own standalone repo; this repo now hosts the code and standards they all depend on.
+This repo holds the **shared foundation** for the Libre family of apps.
 
 ## What lives here
 
