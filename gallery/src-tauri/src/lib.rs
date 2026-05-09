@@ -61,6 +61,20 @@ fn get_accent() -> String {
     librewin_common::get_accent()
 }
 
+#[tauri::command]
+fn write_focus(json: String) -> Result<(), String> {
+    let focus_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .ok_or("could not resolve gallery path")?
+        .join(".focus.json");
+    if json.is_empty() {
+        std::fs::remove_file(&focus_path).ok();
+    } else {
+        std::fs::write(&focus_path, json).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -70,6 +84,7 @@ pub fn run() {
             read_preset,
             get_theme,
             get_accent,
+            write_focus,
             librewin_common::window::close_window,
             librewin_common::window::minimize_window,
             librewin_common::window::toggle_maximize,

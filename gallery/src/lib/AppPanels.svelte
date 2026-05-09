@@ -1,6 +1,7 @@
 <script>
   import FlickerInspector from './panels/FlickerInspector.svelte';
   import FadePanel from './panels/FadePanel.svelte';
+  import { focus, clearFocus } from './focus.svelte.js';
 
   const PANELS = [
     { id: 'flicker-inspector', app: 'Flicker', label: 'Inspector', component: FlickerInspector },
@@ -26,6 +27,21 @@
 
   <!-- Panel body — clipped when closed -->
   <div class="panel-body">
+    <!-- Focus indicator -->
+    <div class="focus-bar" class:has-focus={focus.card}>
+      {#if focus.card}
+        <div class="focus-info">
+          <code class="focus-id">{focus.card.id}</code>
+          <span class="focus-label">{focus.card.label}</span>
+        </div>
+        {#if focus.card.sourceFile}
+          <span class="focus-file">{focus.card.sourceFile}</span>
+        {/if}
+        <button class="focus-clear" onclick={clearFocus} title="Clear focus">✕</button>
+      {:else}
+        <span class="focus-hint">Click any card to focus</span>
+      {/if}
+    </div>
     <div class="panel-tabs">
       {#each PANELS as p}
         <button
@@ -110,6 +126,73 @@
     overflow: hidden;
   }
 
+  .focus-bar {
+    padding: 6px 10px;
+    border-bottom: 1px solid #1c1c1c;
+    background: #141414;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    min-height: 32px;
+  }
+
+  .focus-hint {
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    color: #2a2a2a;
+    text-transform: uppercase;
+    flex: 1;
+  }
+
+  .focus-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .focus-id {
+    font-size: 9px;
+    font-family: 'Geist Mono', monospace;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #2a8de0;
+    flex-shrink: 0;
+  }
+
+  .focus-label {
+    font-size: 10px;
+    color: #888;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .focus-file {
+    font-size: 8px;
+    font-family: 'Geist Mono', monospace;
+    color: #444;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+    display: block;
+  }
+
+  .focus-clear {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 10px;
+    color: #444;
+    padding: 0;
+    flex-shrink: 0;
+    transition: color 0.1s;
+  }
+  .focus-clear:hover { color: #aaa; }
+
   .panel-tabs {
     display: flex;
     border-bottom: 1px solid #1c1c1c;
@@ -170,6 +253,13 @@
     border-color: #999;
   }
   :global(html:not(.dark)) .strip-label { color: #ccc; }
+  :global(html:not(.dark)) .focus-bar { background: #f0f0f0; border-bottom-color: #e0e0e0; }
+  :global(html:not(.dark)) .focus-hint { color: #ccc; }
+  :global(html:not(.dark)) .focus-label { color: #888; }
+  :global(html:not(.dark)) .focus-file { color: #bbb; }
+  :global(html:not(.dark)) .focus-clear { color: #ccc; }
+  :global(html:not(.dark)) .focus-clear:hover { color: #555; }
+
   :global(html:not(.dark)) .panel-tabs {
     background: #efefef;
     border-bottom-color: #e0e0e0;
