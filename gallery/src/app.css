@@ -1,0 +1,23 @@
+@import "tailwindcss";
+@source "../../common-js/src";
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body, #app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: 'Geist', system-ui, sans-serif;
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.animate-fade-in {
+  animation: fade-in 150ms ease;
+}

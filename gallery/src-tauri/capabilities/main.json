@@ -1,0 +1,11 @@
+{
+  "identifier": "main-capability",
+  "description": "Libre UI Gallery main window capabilities",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-start-dragging",
+    "dialog:allow-open",
+    "dialog:allow-save"
+  ]
+}
