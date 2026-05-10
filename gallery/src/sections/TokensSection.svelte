@@ -1,4 +1,6 @@
 <script>
+  import { onMount } from 'svelte';
+
   const colors = [
     { name: '--accent',         label: 'Accent' },
     { name: '--surface',        label: 'Surface' },
@@ -14,19 +16,44 @@
     { name: '--tab-active-bg',  label: 'Tab Active BG' },
   ];
 
-  const typeScale = [
-    { size: '10px', weight: '400', label: 'xs / Section label muted' },
-    { size: '11px', weight: '400', label: 'sm / Section labels' },
-    { size: '12px', weight: '400', label: 'sm / Card labels' },
-    { size: '13px', weight: '400', label: 'base- / Nav items, metadata' },
-    { size: '14px', weight: '400', label: 'base / Body text' },
-    { size: '14px', weight: '500', label: 'base medium / Nav active' },
-    { size: '14px', weight: '600', label: 'base semibold / Button labels' },
-    { size: '16px', weight: '600', label: 'lg / Dialog titles' },
-    { size: '22px', weight: '600', label: 'xl / Page headings' },
-  ];
-
   const spacing = [1, 2, 3, 4, 6, 8, 10, 12, 16];
+
+  let hsvMap = $state({});
+
+  function rgbToHsv(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    const d = max - min;
+    let h = 0;
+    if (d !== 0) {
+      if (max === r) h = ((g - b) / d + 6) % 6;
+      else if (max === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+      h = Math.round(h * 60);
+    }
+    const s = max === 0 ? 0 : Math.round((d / max) * 100);
+    const v = Math.round(max * 100);
+    return { h, s, v };
+  }
+
+  function resolveHsv(tokenName) {
+    const el = document.createElement('div');
+    el.style.cssText = `position:absolute;width:1px;height:1px;background:var(${tokenName})`;
+    document.body.appendChild(el);
+    const raw = getComputedStyle(el).backgroundColor;
+    document.body.removeChild(el);
+    const m = raw.match(/\d+/g);
+    if (!m) return null;
+    return rgbToHsv(+m[0], +m[1], +m[2]);
+  }
+
+  onMount(() => {
+    const map = {};
+    for (const c of colors) {
+      map[c.name] = resolveHsv(c.name);
+    }
+    hsvMap = map;
+  });
 </script>
 
 <div class="section">
@@ -40,20 +67,22 @@
           class="swatch-preview"
           style="background: var({c.name}); border: 1px solid var(--border);"
         ></div>
-        <code class="swatch-token">{c.name}</code>
-        <span class="swatch-label">{c.label}</span>
-      </div>
-    {/each}
-  </div>
-
-  <h2 class="group-title">Typography</h2>
-  <div class="type-list">
-    {#each typeScale as t}
-      <div class="type-row">
-        <span class="type-sample" style="font-size: {t.size}; font-weight: {t.weight};">
-          The quick brown fox jumps
-        </span>
-        <span class="type-meta">{t.size} / w{t.weight} — {t.label}</span>
+        <div class="swatch-meta">
+          <div class="swatch-names">
+            <code class="swatch-token">{c.name}</code>
+            <span class="swatch-label">{c.label}</span>
+          </div>
+          {#if hsvMap[c.name]}
+            <div class="swatch-hsv-block">
+              {#each [['h','H'],['s','S'],['v','V']] as [key, ltr]}
+                <div class="swatch-hsv-row">
+                  <span class="swatch-hsv-value">{hsvMap[c.name][key]}</span>
+                  <span class="swatch-hsv-label">{ltr}</span>
+                </div>
+              {/each}
+            </div>
+          {/if}
+        </div>
       </div>
     {/each}
   </div>
@@ -107,14 +136,29 @@
   }
 
   .swatch-preview {
+    position: relative;
     height: 56px;
     border-radius: 8px;
+  }
+
+  .swatch-meta {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .swatch-names {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
   }
 
   .swatch-token {
     font-size: 10px;
     font-family: 'Geist Mono', monospace;
-    color: var(--accent);
+    color: var(--text-secondary);
     letter-spacing: 0.02em;
   }
 
@@ -123,29 +167,32 @@
     color: var(--text-secondary);
   }
 
-  .type-list {
+  .swatch-hsv-block {
     display: flex;
     flex-direction: column;
+    align-items: flex-end;
+    gap: 1px;
   }
 
-  .type-row {
+  .swatch-hsv-row {
     display: flex;
+    flex-direction: row;
     align-items: baseline;
-    gap: 24px;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--border-subtle);
+    gap: 3px;
   }
 
-  .type-sample {
-    font-family: 'Geist', system-ui, sans-serif;
-    color: var(--text-primary);
-    min-width: 260px;
-  }
-
-  .type-meta {
-    font-size: 11px;
-    color: var(--text-muted);
+  .swatch-hsv-value {
+    font-size: 10px;
     font-family: 'Geist Mono', monospace;
+    color: var(--text-primary);
+    line-height: 1.3;
+  }
+
+  .swatch-hsv-label {
+    font-size: 9px;
+    font-family: 'Geist Mono', monospace;
+    color: var(--text-muted);
+    line-height: 1.3;
   }
 
   .spacing-row {

@@ -1,6 +1,4 @@
 <script>
-  let file = $state({ name: 'audio_track.wav' });
-
   let opts = $state({
     bitrate_mode: 'cbr',
     bitrate: 192,
@@ -41,16 +39,10 @@
 </script>
 
 <div class="ir">
-  <!-- File -->
-  <div class="ir-clip">
-    <p class="ir-clip-label">File</p>
-    <p class="ir-clip-name">{file.name}</p>
-  </div>
-
   <!-- Encoding -->
   <div class="ir-section" style="border-bottom:none">
     <button class="ir-sec-hd" onclick={() => collapsed.encoding = !collapsed.encoding}>
-      <span class="ir-dot" style="background:#e87c30"></span>
+      <span class="ir-dot" style="background:#555"></span>
       <span class="ir-sec-title">MP3 Encoding</span>
       <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="ir-chev" style={chevron(collapsed.encoding)}><path d="M9 18l6-6-6-6"/></svg>
     </button>
@@ -116,46 +108,16 @@
 
 <style>
   .ir {
-    --ir-bg:      #111111;
-    --ir-surface: #181818;
-    --ir-raised:  #1e1e1e;
-    --ir-border:  #252525;
-    --ir-txt:     #d0d0d0;
-    --ir-sec:     #888;
-    --ir-muted:   #555;
-    --ir-val:     #e87c30;
-    background: var(--ir-bg);
-    color: var(--ir-txt);
+    background: var(--surface);
+    color: var(--text-primary);
     font-size: 13px;
     display: flex;
     flex-direction: column;
     min-height: 100%;
   }
 
-  .ir-clip {
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--ir-border);
-    background: var(--ir-raised);
-    flex-shrink: 0;
-  }
-  .ir-clip-label {
-    font-size: 9px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--ir-muted);
-    margin: 0 0 2px;
-  }
-  .ir-clip-name {
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--ir-txt);
-    margin: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
 
-  .ir-section { border-bottom: 1px solid var(--ir-border); }
+  .ir-section { border-bottom: 1px solid var(--border); }
 
   .ir-sec-hd {
     width: 100%;
@@ -163,13 +125,13 @@
     align-items: center;
     gap: 7px;
     padding: 6px 10px;
-    background: var(--ir-surface);
+    background: var(--surface-raised);
     border: none;
     cursor: pointer;
     font-family: inherit;
     transition: background 0.1s;
   }
-  .ir-sec-hd:hover { background: color-mix(in srgb, var(--ir-surface) 85%, #fff); }
+  .ir-sec-hd:hover { background: color-mix(in srgb, var(--surface-raised) 85%, var(--text-primary)); }
 
   .ir-dot {
     width: 6px;
@@ -185,11 +147,11 @@
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--ir-sec);
+    color: var(--text-secondary);
   }
 
   .ir-chev {
-    color: var(--ir-muted);
+    color: var(--text-muted);
     transition: transform 0.15s;
     flex-shrink: 0;
   }
@@ -201,7 +163,7 @@
     gap: 6px;
     transition: background 0.1s;
   }
-  .ir-row:hover { background: rgba(255,255,255,0.03); }
+  .ir-row:hover { background: color-mix(in srgb, var(--surface) 94%, var(--text-primary)); }
 
   .ir-row-field {
     padding-top: 5px;
@@ -217,7 +179,7 @@
   .ir-lbl {
     flex: 1;
     font-size: 10px;
-    color: var(--ir-muted);
+    color: var(--text-muted);
   }
 
   /* Segmented buttons */
@@ -234,28 +196,29 @@
     font-family: inherit;
     font-weight: 600;
     letter-spacing: 0.04em;
-    background: var(--ir-raised);
-    border: 1px solid var(--ir-border);
+    background: var(--surface-panel);
+    border: 1px solid var(--border);
     border-left: none;
-    color: var(--ir-muted);
+    color: var(--text-muted);
     cursor: pointer;
     transition: background 0.1s, color 0.1s;
     white-space: nowrap;
   }
-  .fd-seg-first { border-left: 1px solid var(--ir-border); border-radius: 4px 0 0 4px; }
+  .fd-seg-first { border-left: 1px solid var(--border); border-radius: 4px 0 0 4px; }
   .fd-seg-last  { border-radius: 0 4px 4px 0; }
-  .fd-seg-btn:hover { color: var(--ir-txt); background: color-mix(in srgb, var(--ir-raised) 80%, #fff); }
+  .fd-seg-btn:hover { color: var(--text-primary); background: color-mix(in srgb, var(--surface-panel) 80%, var(--text-primary)); }
   .fd-seg-on {
-    background: color-mix(in srgb, var(--ir-val) 18%, var(--ir-raised));
-    color: var(--ir-val);
-    border-color: color-mix(in srgb, var(--ir-val) 40%, var(--ir-border));
+    background: color-mix(in srgb, var(--accent) 18%, var(--surface-panel));
+    color: #fff;
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
   }
-  .fd-seg-on + .fd-seg-btn { border-left-color: color-mix(in srgb, var(--ir-val) 40%, var(--ir-border)); }
+  .fd-seg-on + .fd-seg-btn { border-left-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+  :global(html:not(.dark)) .ir .fd-seg-on { color: var(--text-primary); }
 
   /* Range slider */
   .fd-range {
     width: 100%;
-    accent-color: var(--ir-val);
+    accent-color: var(--accent);
     cursor: pointer;
   }
   .fd-range-labels {
@@ -263,18 +226,7 @@
     display: flex;
     justify-content: space-between;
     font-size: 9px;
-    color: var(--ir-muted);
+    color: var(--text-muted);
     margin-top: -2px;
-  }
-
-  :global(html:not(.dark)) .ir {
-    --ir-bg:      #f7f7f7;
-    --ir-surface: #eeeeee;
-    --ir-raised:  #f3f3f3;
-    --ir-border:  #e0e0e0;
-    --ir-txt:     #1a1a1a;
-    --ir-sec:     #555;
-    --ir-muted:   #aaa;
-    --ir-val:     #c4621a;
   }
 </style>

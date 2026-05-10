@@ -250,7 +250,7 @@ Each app's `Cargo.toml` references them with `{ workspace = true }` — no versi
 | App | Port |
 |-----|------|
 | Shelf | 1420 |
-| Ghost | 1421 |
+| Avalanche | 1421 |
 | Stack | 1422 |
 | Prism | 1423 |
 | Fade | 1427 |

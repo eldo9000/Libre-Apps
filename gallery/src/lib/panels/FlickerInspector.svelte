@@ -46,16 +46,10 @@
 </script>
 
 <div class="ir">
-  <!-- Clip -->
-  <div class="ir-clip">
-    <p class="ir-clip-label">Clip</p>
-    <p class="ir-clip-name">{clip.name}</p>
-  </div>
-
   <!-- Transform -->
   <div class="ir-section">
     <button class="ir-sec-hd" onclick={() => collapsed.transform = !collapsed.transform}>
-      <span class="ir-dot" style="background:#2a8de0"></span>
+      <span class="ir-dot" style="background:#555"></span>
       <span class="ir-sec-title">Transform</span>
       <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="ir-chev" style={chevron(collapsed.transform)}><path d="M9 18l6-6-6-6"/></svg>
     </button>
@@ -75,7 +69,7 @@
   <!-- Composite -->
   <div class="ir-section">
     <button class="ir-sec-hd" onclick={() => collapsed.composite = !collapsed.composite}>
-      <span class="ir-dot" style="background:#9a6fc8"></span>
+      <span class="ir-dot" style="background:#555"></span>
       <span class="ir-sec-title">Composite</span>
       <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="ir-chev" style={chevron(collapsed.composite)}><path d="M9 18l6-6-6-6"/></svg>
     </button>
@@ -92,7 +86,7 @@
   <!-- Speed -->
   <div class="ir-section">
     <button class="ir-sec-hd" onclick={() => collapsed.speed = !collapsed.speed}>
-      <span class="ir-dot" style="background:#e8a020"></span>
+      <span class="ir-dot" style="background:#555"></span>
       <span class="ir-sec-title">Speed</span>
       <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="ir-chev" style={chevron(collapsed.speed)}><path d="M9 18l6-6-6-6"/></svg>
     </button>
@@ -115,7 +109,7 @@
   <!-- Transitions -->
   <div class="ir-section">
     <button class="ir-sec-hd" onclick={() => collapsed.transitions = !collapsed.transitions}>
-      <span class="ir-dot" style="background:#44cc88"></span>
+      <span class="ir-dot" style="background:#555"></span>
       <span class="ir-sec-title">Transitions</span>
       <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="ir-chev" style={chevron(collapsed.transitions)}><path d="M9 18l6-6-6-6"/></svg>
     </button>
@@ -150,7 +144,7 @@
   <!-- Effects -->
   <div class="ir-section" style="border-bottom:none">
     <button class="ir-sec-hd" onclick={() => collapsed.effects = !collapsed.effects}>
-      <span class="ir-dot" style="background:#cc88ff"></span>
+      <span class="ir-dot" style="background:#555"></span>
       <span class="ir-sec-title">Effects</span>
       <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="ir-chev" style={chevron(collapsed.effects)}><path d="M9 18l6-6-6-6"/></svg>
     </button>
@@ -165,49 +159,15 @@
 
 <style>
   .ir {
-    --ir-bg:       #111111;
-    --ir-surface:  #181818;
-    --ir-raised:   #1e1e1e;
-    --ir-border:   #252525;
-    --ir-txt:      #d0d0d0;
-    --ir-sec:      #888;
-    --ir-muted:    #555;
-    --ir-val:      #7aaacf;
-    --ir-accent:   #2a8de0;
-    background: var(--ir-bg);
-    color: var(--ir-txt);
+    background: var(--surface);
+    color: var(--text-primary);
     font-size: 13px;
     display: flex;
     flex-direction: column;
     min-height: 100%;
   }
 
-  .ir-clip {
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--ir-border);
-    background: var(--ir-raised);
-    flex-shrink: 0;
-  }
-  .ir-clip-label {
-    font-size: 9px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--ir-muted);
-    margin: 0 0 2px;
-  }
-  .ir-clip-name {
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--ir-txt);
-    margin: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .ir-section {
-    border-bottom: 1px solid var(--ir-border);
-  }
+  .ir-section { border-bottom: 1px solid var(--border); }
 
   .ir-sec-hd {
     width: 100%;
@@ -215,13 +175,13 @@
     align-items: center;
     gap: 7px;
     padding: 6px 10px;
-    background: var(--ir-surface);
+    background: var(--surface-raised);
     border: none;
     cursor: pointer;
     font-family: inherit;
     transition: background 0.1s;
   }
-  .ir-sec-hd:hover { background: color-mix(in srgb, var(--ir-surface) 85%, #fff); }
+  .ir-sec-hd:hover { background: color-mix(in srgb, var(--surface-raised) 85%, var(--text-primary)); }
 
   .ir-dot {
     width: 6px;
@@ -237,11 +197,11 @@
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--ir-sec);
+    color: var(--text-secondary);
   }
 
   .ir-chev {
-    color: var(--ir-muted);
+    color: var(--text-muted);
     transition: transform 0.15s;
     flex-shrink: 0;
   }
@@ -253,13 +213,13 @@
     gap: 4px;
     transition: background 0.1s;
   }
-  .ir-row:hover { background: rgba(255,255,255,0.03); }
+  .ir-row:hover { background: color-mix(in srgb, var(--surface) 94%, var(--text-primary)); }
   .ir-row-sub { padding-left: 20px; }
 
   .ir-lbl {
     flex: 1;
     font-size: 10px;
-    color: var(--ir-muted);
+    color: var(--text-muted);
   }
 
   .ir-diamond {
@@ -271,12 +231,12 @@
     background: none;
     border: none;
     cursor: pointer;
-    color: var(--ir-muted);
+    color: var(--text-muted);
     opacity: 0.5;
     flex-shrink: 0;
     padding: 0;
   }
-  .ir-diamond:hover { opacity: 1; color: var(--ir-val); }
+  .ir-diamond:hover { opacity: 1; color: var(--accent); }
 
   .ir-num {
     width: 56px;
@@ -284,7 +244,7 @@
     background: transparent;
     border: none;
     border-bottom: 1px solid transparent;
-    color: var(--ir-val);
+    color: var(--accent);
     font-size: 10px;
     font-family: 'Geist Mono', monospace;
     font-variant-numeric: tabular-nums;
@@ -294,13 +254,13 @@
   }
   .ir-num::-webkit-inner-spin-button,
   .ir-num::-webkit-outer-spin-button { -webkit-appearance: none; }
-  .ir-num:focus { border-bottom-color: var(--ir-val); }
+  .ir-num:focus { border-bottom-color: var(--accent); }
 
   .ir-val {
     font-size: 10px;
     font-family: 'Geist Mono', monospace;
     font-variant-numeric: tabular-nums;
-    color: var(--ir-val);
+    color: var(--accent);
     width: 56px;
     text-align: right;
   }
@@ -308,17 +268,17 @@
   .ir-sel {
     font-size: 10px;
     font-family: inherit;
-    background: var(--ir-raised);
-    border: 1px solid var(--ir-border);
+    background: var(--surface-panel);
+    border: 1px solid var(--border);
     border-radius: 4px;
-    color: var(--ir-sec);
+    color: var(--text-secondary);
     padding: 2px 4px;
     outline: none;
     cursor: pointer;
   }
 
   .ir-check {
-    accent-color: var(--ir-accent);
+    accent-color: var(--accent);
     width: 13px;
     height: 13px;
     cursor: pointer;
@@ -330,30 +290,19 @@
   }
   .ir-effects-msg {
     font-size: 10px;
-    color: var(--ir-muted);
+    color: var(--text-muted);
     margin: 0 0 8px;
   }
   .ir-effects-add {
     font-size: 9px;
     padding: 3px 8px;
     border-radius: 4px;
-    border: 1px solid var(--ir-border);
+    border: 1px solid var(--border);
     background: none;
-    color: var(--ir-accent);
+    color: var(--accent);
     cursor: pointer;
     font-family: inherit;
     transition: background 0.1s;
   }
-  .ir-effects-add:hover { background: rgba(42,141,224,0.08); }
-
-  :global(html:not(.dark)) .ir {
-    --ir-bg:      #f7f7f7;
-    --ir-surface: #eeeeee;
-    --ir-raised:  #f3f3f3;
-    --ir-border:  #e0e0e0;
-    --ir-txt:     #1a1a1a;
-    --ir-sec:     #555;
-    --ir-muted:   #aaa;
-    --ir-val:     #1a60aa;
-  }
+  .ir-effects-add:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
 </style>

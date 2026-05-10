@@ -1,53 +1,103 @@
 <script>
   import FlickerInspector from './panels/FlickerInspector.svelte';
   import FadePanel from './panels/FadePanel.svelte';
+  import TurboTalkPanel from './panels/TurboTalkPanel.svelte';
   import { focus, clearFocus } from './focus.svelte.js';
 
+  let { collapsed = false } = $props();
+
   const PANELS = [
-    { id: 'flicker-inspector', app: 'Flicker', label: 'Inspector', component: FlickerInspector },
-    { id: 'fade-mp3',          app: 'Fade',    label: 'MP3',       component: FadePanel        },
+    { id: 'flicker-inspector', app: 'Flicker',    label: 'Inspector', component: FlickerInspector },
+    { id: 'fade-mp3',          app: 'Fade',        label: 'MP3',       component: FadePanel        },
+    { id: 'turbotalk-settings', app: 'TurboTalk',  label: 'Settings',  component: TurboTalkPanel   },
   ];
 
-  let open        = $state(true);
   let activePanel = $state('flicker-inspector');
-
   const ActivePanel = $derived(PANELS.find(p => p.id === activePanel)?.component);
+
+  // Token inspector tooltip
+  let panelAsideEl = $state(null);
+  let panelContentEl = $state(null);
+  let tt = $state({ visible: false, y: 0, right: 0, token: null, isCard: false });
+  let lastTtEl = null;
+
+  const TOKEN_PRIORITY = ['color', 'background', 'background-color', 'border-color', 'fill', 'accent-color'];
+
+  const NATIVE_CONTROLS = ['checkbox', 'radio', 'range', 'color', 'file'];
+
+  function scanToken(el) {
+    if (el instanceof HTMLInputElement && NATIVE_CONTROLS.includes(el.type)) return null;
+
+    const found = new Map();
+    try {
+      for (const sheet of document.styleSheets) {
+        try {
+          for (const rule of sheet.cssRules) {
+            if (!(rule instanceof CSSStyleRule)) continue;
+            try { if (!el.matches(rule.selectorText)) continue; } catch { continue; }
+            const re = /([\w-]+)\s*:[^;]*var\((--[\w-]+)\)/g;
+            let m;
+            while ((m = re.exec(rule.cssText)) !== null) {
+              if (!found.has(m[1])) found.set(m[1], m[2]);
+            }
+          }
+        } catch { /* cross-origin */ }
+      }
+    } catch {}
+    for (const prop of TOKEN_PRIORITY) {
+      if (found.has(prop)) return found.get(prop);
+    }
+    return found.size > 0 ? [...found.values()][0] : null;
+  }
+
+  function onPanelMove(e) {
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    if (!el || !panelContentEl?.contains(el)) { tt.visible = false; lastTtEl = null; return; }
+    if (el === lastTtEl) return;
+    lastTtEl = el;
+    const zoom = parseFloat(document.documentElement.style.zoom) || 1;
+    const rect = el.getBoundingClientRect();
+    const cardEl = el.closest('[data-card]');
+    tt.token = cardEl ? cardEl.getAttribute('data-card') : scanToken(el);
+    tt.isCard = !!cardEl;
+    tt.y = (rect.top + rect.height / 2) / zoom;
+    tt.right = panelAsideEl.offsetWidth;
+    tt.visible = true;
+  }
+
+  function onPanelLeave() { tt.visible = false; lastTtEl = null; }
 </script>
 
-<aside class="panels" class:open>
-  <!-- Fold strip — always visible -->
-  <div class="fold-strip">
-    <button class="fold-btn" onclick={() => open = !open} title={open ? 'Collapse panels' : 'Expand panels'}>
-      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="fold-icon" class:flipped={open}><path d="M9 18l6-6-6-6"/></svg>
-    </button>
-    {#if !open}
-      <span class="strip-label">App Panels</span>
-    {/if}
+{#if tt.visible}
+  <div class="panel-tt" style="top:{tt.y}px;right:{tt.right}px">
+    <span class="panel-tt-bub" class:panel-tt-null={!tt.token && !tt.isCard} class:panel-tt-card={tt.isCard}>{tt.token ?? 'null'}</span>
+    <span class="panel-tt-arrow"></span>
   </div>
+{/if}
 
-  <!-- Panel body — clipped when closed -->
-  <div class="panel-body">
-    <!-- Focus indicator -->
-    <div class="focus-bar" class:has-focus={focus.cards.length > 0}>
-      {#if focus.cards.length === 1}
-        <div class="focus-info">
-          <code class="focus-id">{focus.cards[0].id}</code>
-          <span class="focus-label">{focus.cards[0].label}</span>
-        </div>
-        {#if focus.cards[0].sourceFile}
-          <span class="focus-file">{focus.cards[0].sourceFile}</span>
+<aside class="panels" class:panels-collapsed={collapsed} bind:this={panelAsideEl}>
+  <div class="panel-body" class:panel-body-hidden={collapsed}>
+    <!-- Focus indicator — only renders when something is focused -->
+    {#if focus.cards.length > 0}
+      <div class="focus-bar has-focus">
+        {#if focus.cards.length === 1}
+          <div class="focus-info">
+            <code class="focus-id">{focus.cards[0].id}</code>
+            <span class="focus-label">{focus.cards[0].label}</span>
+          </div>
+          {#if focus.cards[0].sourceFile}
+            <span class="focus-file">{focus.cards[0].sourceFile}</span>
+          {/if}
+          <button class="focus-clear" onclick={clearFocus} title="Clear focus">✕</button>
+        {:else}
+          <div class="focus-info">
+            <code class="focus-id">{focus.cards.length} selected</code>
+            <span class="focus-label">{focus.cards.map(c => c.id).join(', ')}</span>
+          </div>
+          <button class="focus-clear" onclick={clearFocus} title="Clear all">✕</button>
         {/if}
-        <button class="focus-clear" onclick={clearFocus} title="Clear focus">✕</button>
-      {:else if focus.cards.length > 1}
-        <div class="focus-info">
-          <code class="focus-id">{focus.cards.length} selected</code>
-          <span class="focus-label">{focus.cards.map(c => c.id).join(', ')}</span>
-        </div>
-        <button class="focus-clear" onclick={clearFocus} title="Clear all">✕</button>
-      {:else}
-        <span class="focus-hint">Click any card to focus</span>
-      {/if}
-    </div>
+      </div>
+    {/if}
     <div class="panel-tabs">
       {#each PANELS as p}
         <button
@@ -60,7 +110,7 @@
         </button>
       {/each}
     </div>
-    <div class="panel-content">
+    <div class="panel-content" bind:this={panelContentEl} onmousemove={onPanelMove} onmouseleave={onPanelLeave}>
       {#if ActivePanel}
         <svelte:component this={ActivePanel} />
       {/if}
@@ -69,64 +119,55 @@
 </aside>
 
 <style>
+  .panel-tt {
+    position: fixed;
+    z-index: 9999;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    transform: translateY(-50%);
+  }
+  .panel-tt-bub {
+    background: var(--text-primary);
+    color: var(--surface);
+    font-size: 11px;
+    font-family: 'Geist Mono', monospace;
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    line-height: 1;
+  }
+  .panel-tt-null { color: #f5a623; }
+  .panel-tt-card { color: var(--accent); }
+  .panel-tt-arrow {
+    width: 0;
+    height: 0;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-left: 5px solid var(--text-primary);
+  }
+
   .panels {
     display: flex;
     flex-direction: row;
     flex-shrink: 0;
-    overflow: hidden;
-    width: 28px;
-    transition: width 0.18s ease;
-    border-left: 1px solid #252525;
+    width: 304px;
+    border-left: 1px solid rgba(255 255 255 / 0.06);
     background: #111;
-  }
-  .panels.open { width: 253px; }
-
-  .fold-strip {
-    width: 28px;
-    flex-shrink: 0;
-    border-right: 1px solid #1c1c1c;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding-top: 8px;
-    gap: 10px;
+    transition: width 0.18s ease;
+    overflow: hidden;
   }
 
-  .fold-btn {
-    width: 22px;
-    height: 22px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: none;
-    border: 1px solid #2a2a2a;
-    border-radius: 5px;
-    cursor: pointer;
-    color: #555;
-    flex-shrink: 0;
-    transition: color 0.1s, border-color 0.1s;
+  .panels-collapsed {
+    width: 0;
   }
-  .fold-btn:hover { color: #aaa; border-color: #444; }
 
-  .fold-icon {
-    transition: transform 0.18s;
-    transform: rotate(180deg);
-  }
-  .fold-icon.flipped { transform: rotate(0deg); }
-
-  .strip-label {
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
-    font-size: 9px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: #2a2a2a;
-    user-select: none;
+  .panel-body-hidden {
+    display: none;
   }
 
   .panel-body {
-    width: 224px;
-    flex-shrink: 0;
+    flex: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -164,7 +205,7 @@
     font-family: 'Geist Mono', monospace;
     font-weight: 700;
     letter-spacing: 0.08em;
-    color: #2a8de0;
+    color: var(--text-primary);
     flex-shrink: 0;
   }
 
@@ -219,7 +260,7 @@
     font-family: inherit;
     transition: border-color 0.1s;
   }
-  .panel-tab.active { border-bottom-color: #2a8de0; }
+  .panel-tab.active { border-bottom-color: var(--accent); }
 
   .tab-app {
     font-size: 8px;
@@ -245,20 +286,8 @@
 
   :global(html:not(.dark)) .panels {
     background: #f7f7f7;
-    border-left-color: #e0e0e0;
+    border-left-color: rgba(0 0 0 / 0.07);
   }
-  :global(html:not(.dark)) .fold-strip {
-    border-right-color: #e0e0e0;
-  }
-  :global(html:not(.dark)) .fold-btn {
-    border-color: #d0d0d0;
-    color: #bbb;
-  }
-  :global(html:not(.dark)) .fold-btn:hover {
-    color: #333;
-    border-color: #999;
-  }
-  :global(html:not(.dark)) .strip-label { color: #ccc; }
   :global(html:not(.dark)) .focus-bar { background: #f0f0f0; border-bottom-color: #e0e0e0; }
   :global(html:not(.dark)) .focus-hint { color: #ccc; }
   :global(html:not(.dark)) .focus-label { color: #888; }

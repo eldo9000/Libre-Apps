@@ -1,5 +1,5 @@
 <script>
-  import { ProgressBar, Dialog, Tooltip, Button } from '@libre/ui';
+  import { ProgressBar, Dialog, Tooltip, Button, TrafficLight } from '@libre/ui';
   import Card from '../lib/Card.svelte';
 
   let { toaster } = $props();
@@ -11,6 +11,25 @@
 
 <div class="section">
   <h1 class="page-title">Feedback</h1>
+
+  <h2 class="group-title">TrafficLight</h2>
+  <div class="grid">
+    <Card id="TL-1" label="Filled" sourceFile="common-js/src/components/TrafficLight.svelte">
+      <div class="tl-row">
+        <TrafficLight state="gray" size={10} />
+        <TrafficLight state="green" size={10} />
+        <TrafficLight state="yellow" size={10} />
+        <TrafficLight state="red" size={10} />
+      </div>
+    </Card>
+    <Card id="TL-2" label="Outline" sourceFile="common-js/src/components/TrafficLight.svelte">
+      <div class="tl-row">
+        <TrafficLight state="green" variant="outline" size={10} />
+        <TrafficLight state="yellow" variant="outline" size={10} />
+        <TrafficLight state="red" variant="outline" size={10} />
+      </div>
+    </Card>
+  </div>
 
   <h2 class="group-title">ProgressBar</h2>
   <div class="grid">
@@ -146,6 +165,12 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 16px;
+  }
+
+  .tl-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   .pb-wrap {

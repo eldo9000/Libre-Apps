@@ -10,7 +10,7 @@ all other products.
 **Two problems exist right now:**
 
 1. The accent blue in `tokens.css` is wrong.
-2. None of the five apps (Shelf, Stack, Prism, Fade, Ghost) have frontend source yet.
+2. None of the five apps (Shelf, Stack, Prism, Fade, Avalanche) have frontend source yet.
 
 ---
 

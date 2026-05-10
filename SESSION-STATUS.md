@@ -1,5 +1,5 @@
 ## Current Focus
-Post-split stabilization of Libre-Apps as shared foundation. Apps have moved to separate repos (Shelf-App, Stack-App, Prism-App, Fade-App, Ghost-App) as of commit 532a620. This repo now hosts `librewin-common` (Rust), `@libre/ui` (Svelte), shared docs, and the cross-repo release pipeline.
+Post-split stabilization of Libre-Apps as shared foundation. Apps have moved to separate repos (Shelf-App, Stack-App, Prism-App, Fade-App, Avalanche-App) as of commit 532a620. This repo now hosts `librewin-common` (Rust), `@libre/ui` (Svelte), shared docs, and the cross-repo release pipeline.
 
 ## Last Session (2026-04-20)
 - Refreshed CLAUDE.md and SESSION-STATUS.md to reflect post-split reality (prior versions still described `apps/` monorepo layout from pre-532a620).

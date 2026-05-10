@@ -8,7 +8,7 @@ Before building anything, read `Business-OS/ENGINEERING_STANDARDS.md`. It contai
 
 ## What This Repo Is (as of April 2026)
 
-**Libre-Apps is the shared foundation for the Libre family of desktop apps.** It is no longer a monorepo. The five apps (Shelf, Stack, Prism, Fade, Ghost) each live in their own standalone repo under `eldo9000/`. This repo holds the code and standards they all consume.
+**Libre-Apps is the shared foundation for the Libre family of desktop apps.** It is no longer a monorepo. The five apps (Shelf, Stack, Prism, Fade, Avalanche) each live in their own standalone repo under `eldo9000/`. This repo holds the code and standards they all consume.
 
 | App | Repo | Role |
 |-----|------|------|
@@ -16,7 +16,7 @@ Before building anything, read `Business-OS/ENGINEERING_STANDARDS.md`. It contai
 | Stack | [Stack-App](https://github.com/eldo9000/Stack-App) | Markdown editor |
 | Prism | [Prism-App](https://github.com/eldo9000/Prism-App) | Universal media viewer |
 | Fade  | [Fade-App](https://github.com/eldo9000/Fade-App)   | Media converter |
-| Ghost | [Ghost-App](https://github.com/eldo9000/Ghost-App) | Privacy browser |
+| Avalanche | [Avalanche-App](https://github.com/eldo9000/Avalanche-App) | Privacy browser |
 
 The split happened at commit `532a620`. Any stray `apps/` directory in your working tree is leftover local build output (node_modules, dist, src-tauri targets) — it is untracked and not part of the repo.
 
@@ -42,6 +42,19 @@ common-js/         @libre/ui — shared Svelte 5 component library
     tokens.css     design tokens (CSS variables)
   scripts/
     create-libre-app.js   scaffold a new app against this foundation
+
+gallery/           Live component showcase — primary daily workspace (see ## Gallery)
+  src/
+    App.svelte     shell layout + sections registry
+    sections/      one .svelte per nav section (Demo Tiles, Tokens, Typography, …)
+    lib/
+      AppPanels.svelte   collapsible right sidebar + panels registry
+      Card.svelte         component wrapper with click-to-focus
+      ThemeLab.svelte     HSV color editor (bottom-left dock)
+      focus.svelte.js     focus state store + Tauri write_focus bridge
+      panels/        per-app panel components (FlickerInspector, FadePanel, TurboTalkPanel)
+  src-tauri/       Tauri backend for gallery (write_focus, write_preset, read_preset, save_theme)
+  .focus.json      transient — written by click-to-focus, read by agent (git-ignored)
 
 docs/              shared specs and per-app milestone docs
   ROADMAP.md       master roadmap across the family
@@ -76,9 +89,10 @@ CI for app repos needs `CARGO_DEPS_TOKEN` with read access to this repo. Bump th
 
 ## How to work on this repo
 
-There is no app to run here. Validation is lint + type-check + (eventually) unit tests on the shared crate and UI package.
+**Most day-to-day work happens in `gallery/`** — see the `## Gallery` section below. The root-level tooling is for linting and type-checking the shared packages (`common/` and `common-js/`).
 
 ```bash
+# Shared package validation
 cargo check --workspace        # checks librewin-common
 cargo fmt --check --all
 cargo clippy --workspace -- -D warnings
@@ -89,7 +103,7 @@ npm run lint:css               # stylelint over common-js/src CSS + svelte
 npm run fmt                    # prettier write
 ```
 
-To actually exercise a change end-to-end, pin a downstream app repo at your local commit (or a pushed SHA) and run `tauri dev` over there.
+To exercise a `common/` or `common-js/` change end-to-end: pin a downstream app repo at your local commit (or a pushed SHA) and run `tauri dev` over there. Or validate it directly in the gallery.
 
 ---
 
@@ -160,6 +174,132 @@ Binary install names (do not rename without updating LibreWin-OS `apps.sh` / `br
 | fade  | `fade` |
 
 All release binaries and `.desktop` files are signed with minisign. Production public key lives in `README.md` and is baked into LibreWin OS. See `docs/specs/SIGNING.md`.
+
+---
+
+## Gallery
+
+The gallery is a Svelte 5 + Tauri app that showcases and stress-tests every `@libre/ui` component. It is the **primary daily workspace** in this repo. Running it is how you see and iterate on shared components visually.
+
+### Running the gallery
+
+```bash
+cd gallery
+npm run tauri dev   # full Tauri app — required for click-to-focus, preset save/load
+npm run dev         # Vite-only on :1422 — faster; fine for pure CSS/layout work
+```
+
+Use `npm run tauri dev` any time the click-to-focus system or ThemeLab save/load is involved.
+
+### Shell layout
+
+```
+.shell (flex row, 100vh)
+  ├─ .sidebar (200px, fixed width)
+  │    ├─ header: "◈ Libre UI" logo + dark-mode toggle
+  │    └─ nav: one button per section, auto-highlights on scroll
+  ├─ .content (flex: 1, overflow-y scroll)
+  │    └─ .zoom-wrap — all sections rendered sequentially, separated by borders
+  └─ AppPanels — collapsible right sidebar (304px open / 28px collapsed)
+
+.dock (position: fixed, bottom-left, 200px wide — always visible)
+  ├─ ThemeLab — HSV accent editor
+  └─ dock-footer — zoom controls (−, N%, +)
+```
+
+The sidebar nav has extra bottom padding so items scroll past the fixed dock without being obscured.
+
+### Sections
+
+Registered in `gallery/src/App.svelte` as a `sections` array. Each entry maps to a component in `gallery/src/sections/`:
+
+| id | Label | File |
+|----|-------|------|
+| `demo` | Demo Tiles | `DemoTilesSection.svelte` |
+| `tokens` | Tokens | `TokensSection.svelte` |
+| `typography` | Typography | `TypographySection.svelte` |
+| `buttons` | Buttons & Actions | `ButtonsSection.svelte` |
+| `form` | Form Controls | `FormSection.svelte` |
+| `feedback` | Feedback | `FeedbackSection.svelte` |
+| `navigation` | Navigation | `NavigationSection.svelte` |
+| `layout` | Layout | `LayoutSection.svelte` |
+
+**To add a section:** create `gallery/src/sections/MySec.svelte`, import it in `App.svelte`, push `{ id, label, component }` into the `sections` array. Nav highlight and scroll-to are automatic.
+
+### Right sidebar panels
+
+Application panels (simulated settings UIs from real Libre apps) are registered in `gallery/src/lib/AppPanels.svelte` as a `PANELS` array. Each entry maps to a component in `gallery/src/lib/panels/`:
+
+| id | App | Label | File |
+|----|-----|-------|------|
+| `flicker-inspector` | Flicker | Inspector | `FlickerInspector.svelte` |
+| `fade-mp3` | Fade | MP3 | `FadePanel.svelte` |
+| `turbotalk-settings` | TurboTalk | Settings | `TurboTalkPanel.svelte` |
+
+**To add a panel:** create the component in `panels/`, import it in `AppPanels.svelte`, push `{ id, app, label, component }` into `PANELS`. Tab switching is automatic.
+
+**Panel CSS rules:** panels must not define local `--ir-*` variable blocks. Use global design tokens directly (`var(--surface)`, `var(--border)`, `var(--text-primary/secondary/muted)`, `var(--accent)`). For hover/intermediate values: `color-mix(in srgb, var(--surface) 94%, var(--text-primary))` — this auto-adapts to both themes without any per-panel override block.
+
+### Card component
+
+Every component demo is wrapped in a `<Card>`:
+
+```svelte
+<Card id="BTN-1" label="Primary" sourceFile="common-js/src/components/Button.svelte">
+  <!-- demo content -->
+</Card>
+```
+
+Props:
+- `id` — unique across the entire gallery; drives click-to-focus. Prefix by section: `BTN`, `FORM`, `NAV`, `SEG`, `LAY`, `TYP`, `DEMO`, etc.
+- `label` — human-readable name in the card header and focus bar
+- `sourceFile` — optional; shown in the token inspect overlay
+- `component` — optional; stored in focus data, not rendered
+
+Card interactions: click header → single focus, Shift+click header → multi-select, Shift+click body → CSS token inspector overlay.
+
+### ThemeLab
+
+Always-visible color editor pinned to the bottom-left dock.
+
+**Light HSV sliders (H / S / V):** define the base accent color for light mode.
+
+**Dark Δ sliders (ΔH / ΔS / ΔV):** ±20° / ±20pp shift applied on top of the light accent to derive the dark-mode accent. The two dot swatches next to "Dark Δ" preview the current light/dark pair.
+
+**Accent token override mechanism:** `ThemeLab` sets four CSS properties on `:root` — `--accent-light`, `--accent-light-hover`, `--accent-dark`, `--accent-dark-hover`. Its own `:global(html:not(.dark))` and `:global(html.dark)` rules (specificity 0-1-1, beats `tokens.css` `:root` at 0-0-1) assign `--accent: var(--accent-light/dark)`. Theme switching is pure CSS — no MutationObserver.
+
+**Persistence:** `localStorage` key `libre-theme-lab` stores `{ accent, deltaH, deltaS, deltaV }`. Zoom persists under `libre-gallery-zoom`.
+
+### Click-to-focus agent workflow
+
+The gallery has a built-in point-and-select system. When the user says "fix the one I marked" or "remove the two I selected", **read `gallery/.focus.json` first**.
+
+```bash
+cat gallery/.focus.json
+```
+
+**Schema — single card:**
+```json
+{ "id": "BTN-1", "label": "Primary", "sourceFile": null, "component": null, "focusedAt": "2026-05-09T18:42:00.000Z" }
+```
+
+**Schema — multiple cards:**
+```json
+[
+  { "id": "SEG-5", "label": "Sliding / md", "sourceFile": null, "component": null, "focusedAt": "…" },
+  { "id": "SEG-6", "label": "Sliding / sm", "sourceFile": null, "component": null, "focusedAt": "…" }
+]
+```
+
+**File absent** → nothing is focused.
+
+Use `id` to find the card in source:
+
+```bash
+grep -r "SEG-5" gallery/src/sections/
+```
+
+Use `label` to confirm you have the right element. The right sidebar focus bar shows the current selection; a `◉` pip and accent border appear on focused cards in the UI.
 
 ---
 

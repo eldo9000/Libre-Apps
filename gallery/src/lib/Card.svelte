@@ -18,6 +18,8 @@
   function handleHeaderClick(e) {
     if (e.shiftKey) {
       toggleFocus({ id, label, sourceFile, component });
+    } else if (isFocused && focus.cards.length === 1) {
+      clearFocus();
     } else {
       setSingleFocus({ id, label, sourceFile, component });
     }
@@ -105,7 +107,7 @@
     font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--accent);
+    color: var(--text-primary);
     font-family: 'Geist Mono', 'Fira Code', monospace;
   }
 
@@ -198,7 +200,7 @@
 
   .inspect-file {
     padding: 4px 10px;
-    color: var(--accent);
+    color: var(--text-muted);
     border-top: 1px solid var(--border-subtle);
     overflow: hidden;
     text-overflow: ellipsis;

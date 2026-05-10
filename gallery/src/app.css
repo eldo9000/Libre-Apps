@@ -3,6 +3,8 @@
 
 *, *::before, *::after {
   box-sizing: border-box;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 html, body, #app {
@@ -17,6 +19,12 @@ body {
   font-size: 14px;
   line-height: 1.5;
 }
+
+/* Gallery uses decorations:true (native window) — cancel the transparent-window
+   chrome rules from tokens.css which add 8px padding and border-radius. */
+html, body { background: var(--surface); }
+#app { padding: 0; background: var(--surface); overflow: hidden; }
+#app > div:first-child { border-radius: 0 !important; box-shadow: none; }
 
 .animate-fade-in {
   animation: fade-in 150ms ease;
