@@ -28,16 +28,22 @@
   <!-- Panel body — clipped when closed -->
   <div class="panel-body">
     <!-- Focus indicator -->
-    <div class="focus-bar" class:has-focus={focus.card}>
-      {#if focus.card}
+    <div class="focus-bar" class:has-focus={focus.cards.length > 0}>
+      {#if focus.cards.length === 1}
         <div class="focus-info">
-          <code class="focus-id">{focus.card.id}</code>
-          <span class="focus-label">{focus.card.label}</span>
+          <code class="focus-id">{focus.cards[0].id}</code>
+          <span class="focus-label">{focus.cards[0].label}</span>
         </div>
-        {#if focus.card.sourceFile}
-          <span class="focus-file">{focus.card.sourceFile}</span>
+        {#if focus.cards[0].sourceFile}
+          <span class="focus-file">{focus.cards[0].sourceFile}</span>
         {/if}
         <button class="focus-clear" onclick={clearFocus} title="Clear focus">✕</button>
+      {:else if focus.cards.length > 1}
+        <div class="focus-info">
+          <code class="focus-id">{focus.cards.length} selected</code>
+          <span class="focus-label">{focus.cards.map(c => c.id).join(', ')}</span>
+        </div>
+        <button class="focus-clear" onclick={clearFocus} title="Clear all">✕</button>
       {:else}
         <span class="focus-hint">Click any card to focus</span>
       {/if}

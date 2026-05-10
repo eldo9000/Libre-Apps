@@ -1,9 +1,9 @@
 <script>
-  import { focus, setFocus, clearFocus } from './focus.svelte.js';
+  import { focus, setSingleFocus, toggleFocus, clearFocus } from './focus.svelte.js';
 
   let { id, label, sourceFile = null, component = null, children } = $props();
 
-  const isFocused = $derived(focus.card?.id === id);
+  const isFocused = $derived(focus.cards.some(c => c.id === id));
 
   let inspecting = $state(false);
   let tokens = $state([]);
@@ -16,10 +16,10 @@
   ];
 
   function handleHeaderClick(e) {
-    if (isFocused) {
-      clearFocus();
+    if (e.shiftKey) {
+      toggleFocus({ id, label, sourceFile, component });
     } else {
-      setFocus({ id, label, sourceFile, component });
+      setSingleFocus({ id, label, sourceFile, component });
     }
   }
 
