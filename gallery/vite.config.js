@@ -25,7 +25,7 @@ export default defineConfig({
     port: 1422,
     strictPort: true,
     watch: {
-      ignored: ['**/src-tauri/**'],
+      ignored: ['**/src-tauri/**', '**/.focus.json'],
     },
   },
   envPrefix: ['VITE_', 'TAURI_ENV_*'],
