@@ -27,6 +27,7 @@ module.exports = {
       },
     ],
 
+
     // Keep standard invalid-hex check too
     'color-no-invalid-hex': true,
 
@@ -49,4 +50,14 @@ module.exports = {
       { ignorePseudoClasses: ['global', 'local'] },
     ],
   },
+
+  // tokens.css is the raw-value source of truth — hex is expected there
+  overrides: [
+    {
+      files: ['**/tokens.css'],
+      rules: {
+        'declaration-property-value-disallowed-list': null,
+      },
+    },
+  ],
 };

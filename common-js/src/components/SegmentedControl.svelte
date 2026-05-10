@@ -49,7 +49,7 @@
         style="width:calc((100% - 4px) / {options.length});
                left:calc(2px + {activeIndex} * (100% - 4px) / {options.length});
                background:var(--surface-raised);
-               box-shadow:0 1px 3px rgba(0,0,0,0.35);"
+               box-shadow:0 1px 3px rgb(0 0 0 / 35%);"
       ></div>
     {/if}
     {#each options as opt}
