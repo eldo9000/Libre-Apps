@@ -28,7 +28,7 @@
     sm: { h: 22, px: 'px-2.5', py: 'py-[3px]', text: 'text-[11px]' },
     md: { h: 28, px: 'px-3',   py: 'py-[5px]', text: 'text-[12px]' },
   };
-  const s = sizes[size] ?? sizes.md;
+  const s = $derived(sizes[size] ?? sizes.md);
 
   const activeIndex = $derived(options.findIndex(o => o.value === value));
 
@@ -62,6 +62,7 @@
                  ? 'text-[var(--text-primary)]'
                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'}"
       >
+        <!-- eslint-disable-next-line svelte/no-at-html-tags -->
         {#if opt.icon}{@html opt.icon}{/if}
         {opt.label}
       </button>
@@ -83,6 +84,7 @@
                  ? 'seg-active z-10'
                  : 'seg-inactive border-[var(--border)] text-[color-mix(in_srgb,var(--text-primary)_70%,transparent)] hover:z-10'}"
       >
+        <!-- eslint-disable-next-line svelte/no-at-html-tags -->
         {#if opt.icon}{@html opt.icon}{/if}
         {opt.label}
       </button>

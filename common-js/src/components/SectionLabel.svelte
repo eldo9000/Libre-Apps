@@ -18,8 +18,9 @@
     children,
   } = $props();
 
-  const sizeClass = size === 'xs' ? 'text-[10px]' : 'text-[11px]';
-  const baseClass = `${sizeClass} font-semibold uppercase tracking-widest text-[var(--text-muted)] ${extraClass}`;
+  const baseClass = $derived(
+    `${size === 'xs' ? 'text-[10px]' : 'text-[11px]'} font-semibold uppercase tracking-widest text-[var(--text-muted)] ${extraClass}`
+  );
 </script>
 
 {#if htmlFor}
