@@ -97,8 +97,6 @@
 {/snippet}
 
 <div class="section">
-  <h1 class="page-title">Navigation</h1>
-
   <h2 class="group-title">Global Tabs</h2>
   <div class="grid-wide">
     <Card id="GTAB-1" label="Top-bar workspace switcher" sourceFile="common-js/src/components/GlobalTabs.svelte">
@@ -223,15 +221,8 @@
 <style>
   .section { max-width: 900px; }
 
-  .page-title {
-    font-size: 22px;
-    font-weight: 600;
-    letter-spacing: -0.02em;
-    margin: 0 0 32px;
-  }
-
   .group-title {
-    font-size: 11px;
+    font-size: 22px;
     font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;

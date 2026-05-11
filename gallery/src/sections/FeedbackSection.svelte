@@ -10,8 +10,6 @@
 </script>
 
 <div class="section">
-  <h1 class="page-title">Feedback</h1>
-
   <h2 class="group-title">TrafficLight</h2>
   <div class="grid">
     <Card id="TL-1" label="Filled" sourceFile="common-js/src/components/TrafficLight.svelte">
@@ -143,15 +141,8 @@
 <style>
   .section { max-width: 900px; }
 
-  .page-title {
-    font-size: 22px;
-    font-weight: 600;
-    letter-spacing: -0.02em;
-    margin: 0 0 32px;
-  }
-
   .group-title {
-    font-size: 11px;
+    font-size: 22px;
     font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;

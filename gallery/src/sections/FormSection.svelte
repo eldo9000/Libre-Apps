@@ -35,8 +35,6 @@
 </script>
 
 <div class="section">
-  <h1 class="page-title">Form Controls</h1>
-
   <h2 class="group-title">Input</h2>
   <div class="grid">
     <Card id="INP-1" label="Default">
@@ -205,15 +203,8 @@
 
   .section { max-width: 900px; }
 
-  .page-title {
-    font-size: 22px;
-    font-weight: 600;
-    letter-spacing: -0.02em;
-    margin: 0 0 32px;
-  }
-
   .group-title {
-    font-size: 11px;
+    font-size: 22px;
     font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;

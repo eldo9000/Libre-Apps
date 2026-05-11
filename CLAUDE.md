@@ -110,7 +110,7 @@ To exercise a `common/` or `common-js/` change end-to-end: pin a downstream app 
 ## Design System
 
 Light mode default, dark mode supported. Both first-class via CSS variables.
-- **Accent:** `#0066cc` via `--accent` (user-configurable via `~/.config/librewin/accent`). `#297acc` was the old erroneous default — any remnants are bugs.
+- **Accent:** `#2884c9` via `--accent` (user-configurable via `~/.config/librewin/accent`). `#297acc` and `#0066cc` were previous values — any remnants are bugs.
 - **Font:** Geist, 14px base, 1.5 line height, antialiased.
 - **Spacing:** 4px base unit, compact density.
 - **Window chrome:** custom titlebar, `decorations: false`, `transparent: true`, 10px border-radius, drop shadow.
@@ -126,8 +126,8 @@ Source of truth for tokens: `common-js/src/tokens.css`. Source of truth for shar
 
 Non-obvious permanent truths. Add immediately when discovered.
 
-**Accent color is `#0066cc`, not `#297acc`.**
-`#297acc` was the old erroneous default. Any CSS `:root` block or Rust `get_accent` fallback still using `#297acc` is a bug.
+**Accent color is `#2884c9` (HSV 206°/80%/79%), hover `#2373b0`.**
+`#297acc` and `#0066cc` were previous values — both are wrong. Any CSS `:root` block or Rust `get_accent` fallback not using `#2884c9` is a bug. The Rust fallback in `librewin-common` also needs updating if touched.
 
 **Never hold a Mutex lock while spawning a thread in Tauri commands.**
 Extract the data, drop the lock, then spawn. Holding across `thread::spawn` / `tokio::spawn` deadlocks on re-entrant IPC.
@@ -139,7 +139,7 @@ Never use `$:`, `createEventDispatcher`, or `export let`. Only `$state`, `$deriv
 Missing any one causes visual breakage. All four must be set per-app.
 
 **Theme sync reads from `~/.config/librewin/theme` and `~/.config/librewin/accent` via `librewin_common` helpers.**
-Do not read those files directly from app code — use `get_theme()` / `get_accent()` IPC commands backed by `librewin_common`. Consistent fallback (`light` / `#0066cc`).
+Do not read those files directly from app code — use `get_theme()` / `get_accent()` IPC commands backed by `librewin_common`. Consistent fallback (`light` / `#2884c9`).
 
 **Linux dev renderer is WebKit2GTK 4.1 — declare all system deps in `tauri.conf.json`.**
 Undeclared deps install fine on dev machines but break in CI and ISO builds. macOS uses a different WebKit — Linux rendering bugs won't surface in `tauri dev` on macOS.

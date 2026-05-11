@@ -57,8 +57,6 @@
 </script>
 
 <div class="section">
-  <h1 class="page-title">Design Tokens</h1>
-
   <h2 class="group-title">Color</h2>
   <div class="color-grid">
     {#each colors as c}
@@ -104,16 +102,8 @@
 <style>
   .section { max-width: 900px; }
 
-  .page-title {
-    font-size: 22px;
-    font-weight: 600;
-    letter-spacing: -0.02em;
-    color: var(--text-primary);
-    margin: 0 0 32px;
-  }
-
   .group-title {
-    font-size: 11px;
+    font-size: 22px;
     font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;

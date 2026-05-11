@@ -18,33 +18,35 @@
   import StackSection from './sections/StackSection.svelte';
   import PrismSection from './sections/PrismSection.svelte';
   import FadeSection from './sections/FadeSection.svelte';
+  import LibreWinSection from './sections/LibreWinSection.svelte';
+  import MiniMap from './lib/MiniMap.svelte';
   import { createZoom, ZOOM_STEPS } from './lib/stores/zoom.svelte.js';
   import { tooltip, setHint } from './lib/stores/tooltip.svelte.js';
 
   const sections = [
-    { id: 'demo',       label: 'Demo Layouts',      component: DemoTilesSection,  tab: 'overview'   },
-    { id: 'typography', label: 'Typography',        component: TypographySection, tab: 'components' },
-    { id: 'buttons',    label: 'Buttons & Actions', component: ButtonsSection,    tab: 'components' },
-    { id: 'form',       label: 'Form Controls',     component: FormSection,       tab: 'components' },
-    { id: 'feedback',   label: 'Feedback',          component: FeedbackSection,   tab: 'components' },
-    { id: 'navigation', label: 'Navigation',        component: NavigationSection, tab: 'components' },
-    { id: 'layout',     label: 'Layout',            component: LayoutSection,     tab: 'components' },
-    { id: 'media',      label: 'Media',             component: MediaSection,      tab: 'components' },
-    { id: 'patterns',    label: 'Patterns',  component: PatternsSection, tab: 'patterns'      },
-    { id: 'tokens',      label: 'Tokens',    component: TokensSection,   tab: 'tokens'        },
+    { id: 'demo',       label: 'Demo Layouts',      component: DemoTilesSection,  tab: 'overview'    },
+    { id: 'buttons',    label: 'Buttons & Actions', component: ButtonsSection,    tab: 'components'  },
+    { id: 'form',       label: 'Form Controls',     component: FormSection,       tab: 'components'  },
+    { id: 'feedback',   label: 'Feedback',          component: FeedbackSection,   tab: 'components'  },
+    { id: 'navigation', label: 'Navigation',        component: NavigationSection, tab: 'components'  },
+    { id: 'layout',     label: 'Layout',            component: LayoutSection,     tab: 'components'  },
+    { id: 'media',      label: 'Media',             component: MediaSection,      tab: 'components'  },
+    { id: 'typography', label: 'Typography',        component: TypographySection, tab: 'foundation'  },
+    { id: 'tokens',     label: 'Tokens',            component: TokensSection,     tab: 'foundation'  },
+    { id: 'patterns',   label: 'Patterns',          component: PatternsSection,   tab: 'foundation'  },
     { id: 'app-flicker', label: 'Flicker',   component: FlickerSection,  tab: 'applications'  },
     { id: 'app-shelf',   label: 'Shelf',     component: ShelfSection,    tab: 'applications'  },
     { id: 'app-stack',   label: 'Stack',     component: StackSection,    tab: 'applications'  },
     { id: 'app-prism',   label: 'Prism',     component: PrismSection,    tab: 'applications'  },
-    { id: 'app-fade',    label: 'Fade',      component: FadeSection,     tab: 'applications'  },
+    { id: 'app-fade',      label: 'Fade',      component: FadeSection,      tab: 'applications'  },
+    { id: 'app-librewin', label: 'LibreWin',  component: LibreWinSection,  tab: 'applications'  },
   ];
 
   const TOP_TABS = [
-    { id: 'overview',      label: 'Demo Layouts' },
+    { id: 'foundation',    label: 'Foundation' },
     { id: 'components',    label: 'Components' },
-    { id: 'patterns',      label: 'Patterns' },
-    { id: 'tokens',        label: 'Tokens' },
     { id: 'applications',  label: 'Applications' },
+    { id: 'overview',      label: 'Demo Layouts' },
   ];
 
   const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
@@ -560,6 +562,8 @@
         <ThemeLab bind:dark />
       </div>
     </aside>
+
+    <MiniMap {contentEl} visible={activeTab === 'components' || activeTab === 'applications' || activeTab === 'foundation'} />
 
     <main class="content" bind:this={contentEl} onmousemove={onAppMove} onmouseleave={onAppLeave}>
       {#each visibleSections as s}
@@ -1167,7 +1171,7 @@
   .gallery-section:last-child { border-bottom: none; padding-bottom: 0; }
 
   .section-h1 {
-    font-size: 30px;
+    font-size: 60px;
     font-weight: 700;
     letter-spacing: -0.03em;
     color: var(--text-primary);

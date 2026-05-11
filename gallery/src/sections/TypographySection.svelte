@@ -308,7 +308,7 @@
   }
 
   .group-title {
-    font-size: 11px;
+    font-size: 22px;
     font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;

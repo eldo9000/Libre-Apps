@@ -4,8 +4,6 @@
 </script>
 
 <div class="section">
-  <h1 class="page-title">Buttons & Actions</h1>
-
   <h2 class="group-title">Button</h2>
   <div class="grid">
     <Card id="BTN-1" label="Primary">
@@ -79,15 +77,8 @@
 <style>
   .section { max-width: 900px; }
 
-  .page-title {
-    font-size: 22px;
-    font-weight: 600;
-    letter-spacing: -0.02em;
-    margin: 0 0 32px;
-  }
-
   .group-title {
-    font-size: 11px;
+    font-size: 22px;
     font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;
