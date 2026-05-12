@@ -1,5 +1,6 @@
 <script>
   import { Transport, Timecode } from '@libre/ui';
+  import BezierEditor from '@libre/ui/src/components/BezierEditor.svelte';
   import Card from '../lib/Card.svelte';
   import { onDestroy } from 'svelte';
 
@@ -52,6 +53,9 @@
   function skipEnd()   { time = duration; playing = false; cancelAnimationFrame(raf); }
 
   onDestroy(() => cancelAnimationFrame(raf));
+
+  let bezierValue = $state([0.25, 0.46, 0.45, 0.94]);
+  let bezierSaved = $state([0.25, 0.46, 0.45, 0.94]);
 </script>
 
 <div class="section">
@@ -78,6 +82,16 @@
 
     <Card id="MED-2" label="Idle / stopped" sourceFile="common-js/src/components/Transport.svelte">
       <Transport playing={false} />
+    </Card>
+  </div>
+
+  <h2 class="group-title">Bezier Editor</h2>
+  <div class="grid">
+    <Card id="MED-6" label="Bezier Editor" sourceFile="common-js/src/components/BezierEditor.svelte">
+      <BezierEditor
+        bind:value={bezierValue}
+        bind:savedValue={bezierSaved}
+      />
     </Card>
   </div>
 

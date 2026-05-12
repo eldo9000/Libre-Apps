@@ -124,7 +124,7 @@
     gap: 4px;
     padding: 0 12px;
     height: 36px;
-    background: color-mix(in srgb, var(--surface) 70%, var(--surface-deep, #000));
+    background: color-mix(in srgb, var(--surface) 70%, var(--surface-deep, black));
     border-top: 1px solid var(--border);
     border-bottom: 1px solid var(--border);
   }
@@ -143,10 +143,12 @@
     padding: 0;
     transition: background 0.1s, color 0.1s;
   }
+
   .t-btn:hover {
     background: color-mix(in srgb, var(--text-primary) 8%, transparent);
     color: var(--text-secondary);
   }
+
   .t-btn-active {
     color: var(--accent) !important;
   }

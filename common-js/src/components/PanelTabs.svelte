@@ -53,6 +53,7 @@
     height: 28px;
     gap: 0;
   }
+
   .pt-tab {
     height: 100%;
     padding: 0 12px;
@@ -70,9 +71,11 @@
     cursor: pointer;
     transition: color 0.1s, border-color 0.1s;
   }
+
   .pt-tab:hover {
     color: var(--text-secondary);
   }
+
   .pt-tab-active {
     color: var(--text-primary);
     border-bottom-color: var(--accent-bright, var(--accent));

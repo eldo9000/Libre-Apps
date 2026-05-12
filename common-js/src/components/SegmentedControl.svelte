@@ -88,13 +88,13 @@
 {:else if variant === 'sliding'}
   <div
     class="relative inline-flex rounded shrink-0 {extraClass}"
-    style="background:rgb(0 0 0 / 0.22); padding:2px; height:{s.h}px;"
+    style="background:rgb(0 0 0 / 22%); padding:2px; height:{s.h}px;"
   >
     {#if slidingPillStyle}
       <div
         class="absolute inset-y-[2px] rounded pointer-events-none transition-all duration-150 ease-out"
         style="{slidingPillStyle}
-               background:color-mix(in srgb, white 18%, var(--surface-raised));
+               background:color-mix(in srgb, white 18%, var(--surface-raised));background
                box-shadow:0 1px 3px rgb(0 0 0 / 35%);"
       ></div>
     {/if}

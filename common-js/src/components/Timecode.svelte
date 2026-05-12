@@ -94,17 +94,17 @@
     align-items: stretch;
     min-width: 144px;
     padding: 4px 16px;
-    background: var(--surface-deep, #0c0c0c);
+    background: var(--surface-deep, rgb(12 12 12));
     border: 1px solid var(--border);
     border-radius: 4px;
-    color: #3a3a3a;
+    color: rgb(58 58 58);
     font-family: 'Geist Mono', ui-monospace, monospace;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.05em;
     cursor: default;
     transition: background 0.1s;
   }
-  .tc:hover { background: color-mix(in srgb, var(--surface-deep, #0c0c0c) 70%, var(--text-primary)); }
+  .tc:hover { background: color-mix(in srgb, var(--surface-deep, rgb(12 12 12)) 70%, var(--text-primary)); }
 
   .tc-main {
     display: block;
@@ -124,6 +124,6 @@
     letter-spacing: 0.04em;
   }
 
-  .bright { color: #c8c8c8; }
-  .tc-sep { color: #2e2e2e; }
+  .bright { color: rgb(200 200 200); }
+  .tc-sep { color: rgb(46 46 46); }
 </style>

@@ -24,7 +24,9 @@
 {:else}
   <span
     class="traffic-light"
-    style="--tl-size:{size}px; --tl-color:{color}"
+    style="
+
+--tl-size:{size}px; --tl-color:{color}"
   ></span>
 {/if}
 

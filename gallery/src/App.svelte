@@ -42,11 +42,14 @@
     { id: 'app-librewin', label: 'LibreWin',  component: LibreWinSection,  tab: 'applications'  },
   ];
 
-  const TOP_TABS = [
-    { id: 'foundation',    label: 'Foundation' },
-    { id: 'components',    label: 'Components' },
-    { id: 'applications',  label: 'Applications' },
-    { id: 'overview',      label: 'Demo Layouts' },
+  const TABS_FOUNDATION = [
+    { id: 'foundation',   label: 'Foundation' },
+    { id: 'components',   label: 'Components' },
+  ];
+
+  const TABS_APPS = [
+    { id: 'applications', label: 'Applications' },
+    { id: 'overview',     label: 'Demo Layouts' },
   ];
 
   const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
@@ -426,7 +429,11 @@
 
     <!-- CENTER: workspace tabs (absolutely centered) -->
     <div class="top-center">
-      <GlobalTabs tabs={TOP_TABS} bind:active={activeTab} />
+      <div class="tab-groups">
+        <GlobalTabs tabs={TABS_FOUNDATION} bind:active={activeTab} />
+        <div class="tab-group-sep"></div>
+        <GlobalTabs tabs={TABS_APPS} bind:active={activeTab} color="#e07a2f" />
+      </div>
     </div>
 
     <!-- RIGHT: dev tools group + project/global settings + copy status -->
@@ -1432,6 +1439,18 @@
     pointer-events: none;
   }
   .top-center :global(.gt-group) { pointer-events: auto; }
+
+  .tab-groups {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tab-group-sep {
+    width: 1px;
+    height: 16px;
+    background: rgb(255 255 255 / 0.15);
+    flex-shrink: 0;
+  }
 
   /* Right zone — dev tools */
   .top-right {

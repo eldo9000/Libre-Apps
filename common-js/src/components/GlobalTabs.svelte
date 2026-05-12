@@ -25,6 +25,7 @@
     active = $bindable(''),
     onSelect,
     ariaLabel = 'Workspace',
+    color = 'var(--accent)',
   } = $props();
 
   const activeIndex = $derived(tabs.findIndex(t => t.id === active));
@@ -50,7 +51,9 @@
   }
 </script>
 
-<div class="gt-group" role="tablist" aria-label={ariaLabel}>
+<div class="gt-group" role="tablist" aria-label={ariaLabel} style="
+
+--gt-underline-color: {color}">
   {#if pillStyle}
     <div class="gt-pill" style={pillStyle}>
       <span class="gt-underline"></span>
@@ -78,18 +81,20 @@
     height: 28px;
     padding: 2px;
     border-radius: 6px;
-    background: rgb(0 0 0 / 0.22);
+    background: rgb(0 0 0 / 22%);
   }
+
   .gt-pill {
     position: absolute;
     top: 2px;
     bottom: 2px;
     border-radius: 4px;
     background: color-mix(in srgb, white 18%, var(--surface-raised));
-    box-shadow: 0 1px 3px rgb(0 0 0 / 0.35);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 35%);
     pointer-events: none;
     transition: left 0.15s ease-out, width 0.15s ease-out;
   }
+
   .gt-underline {
     position: absolute;
     bottom: 0;
@@ -97,8 +102,9 @@
     right: 10px;
     height: 2px;
     border-radius: 1px 1px 0 0;
-    background: var(--accent);
+    background: var(--gt-underline-color, var(--accent));
   }
+
   .gt-tab {
     position: relative;
     z-index: 10;
@@ -120,9 +126,11 @@
     transition: color 0.1s;
     white-space: nowrap;
   }
+
   .gt-tab:hover {
     color: var(--text-secondary);
   }
+
   .gt-tab-active {
     color: var(--text-primary);
   }
