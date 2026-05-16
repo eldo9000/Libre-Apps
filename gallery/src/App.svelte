@@ -12,7 +12,10 @@
   import TypographySection from './sections/TypographySection.svelte';
   import DemoTilesSection from './sections/DemoTilesSection.svelte';
   import MediaSection from './sections/MediaSection.svelte';
+  import LoadingSection from './sections/LoadingSection.svelte';
   import PatternsSection from './sections/PatternsSection.svelte';
+  import MotionSection from './sections/MotionSection.svelte';
+  import UIStandardsSection from './sections/UIStandardsSection.svelte';
   import FlickerSection from './sections/FlickerSection.svelte';
   import ShelfSection from './sections/ShelfSection.svelte';
   import StackSection from './sections/StackSection.svelte';
@@ -22,6 +25,7 @@
   import MiniMap from './lib/MiniMap.svelte';
   import { createZoom, ZOOM_STEPS } from './lib/stores/zoom.svelte.js';
   import { tooltip, setHint } from './lib/stores/tooltip.svelte.js';
+  import { canvas } from './lib/stores/canvas.svelte.js';
 
   const sections = [
     { id: 'demo',       label: 'Demo Layouts',      component: DemoTilesSection,  tab: 'overview'    },
@@ -31,9 +35,12 @@
     { id: 'navigation', label: 'Navigation',        component: NavigationSection, tab: 'components'  },
     { id: 'layout',     label: 'Layout',            component: LayoutSection,     tab: 'components'  },
     { id: 'media',      label: 'Media',             component: MediaSection,      tab: 'components'  },
+    { id: 'loading',    label: 'Loading',           component: LoadingSection,    tab: 'components'  },
     { id: 'typography', label: 'Typography',        component: TypographySection, tab: 'foundation'  },
     { id: 'tokens',     label: 'Tokens',            component: TokensSection,     tab: 'foundation'  },
     { id: 'patterns',   label: 'Patterns',          component: PatternsSection,   tab: 'foundation'  },
+    { id: 'motion',     label: 'Motion',            component: MotionSection,     tab: 'foundation'  },
+    { id: 'ui-standards', label: 'UI Standards',   component: UIStandardsSection, tab: 'foundation' },
     { id: 'app-flicker', label: 'Flicker',   component: FlickerSection,  tab: 'applications'  },
     { id: 'app-shelf',   label: 'Shelf',     component: ShelfSection,    tab: 'applications'  },
     { id: 'app-stack',   label: 'Stack',     component: StackSection,    tab: 'applications'  },
@@ -84,6 +91,7 @@
 
   // ── Top bar state ──────────────────────────────────────────────────────
   let activeTab = $state('overview');
+  $effect(() => { canvas.activeTab = activeTab; });
   let projectName = $state('Libre UI');
   let panelsCollapsed = $state(localStorage.getItem('libre-panels-collapsed') === 'true');
 
@@ -165,6 +173,7 @@
   // ── Project Manager modal ─────────────────────────────────────────────
   let projectManagerOpen    = $state(false);
   let projectManagerClosing = $state(false);
+  let pmOpenFolders = $state({ active: true, apps: true, archive: false });
 
   function closeProjectManager() {
     if (projectManagerClosing) return;
@@ -997,7 +1006,7 @@
   </div>
 {/if}
 
-<!-- Project Manager modal — 960px wide mockup -->
+<!-- Project Manager modal — 1200px wide mockup -->
 {#if projectManagerOpen}
   <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
   <div
@@ -1034,24 +1043,54 @@
           </div>
 
           {#each [
-            { name: 'Libre UI',      mod: 'Today',      active: true  },
-            { name: 'Component Lab', mod: 'Yesterday',  active: false },
-            { name: 'Token Sandbox', mod: '3 days ago', active: false },
-            { name: 'Fade Converter',mod: 'Last week',  active: false },
-          ] as p}
-            <button class="pm-project-row" class:pm-project-active={p.active}>
-              <div class="pm-project-ico">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                  <polyline points="9 22 9 12 15 12 15 22"/>
+            { key: 'active',  label: 'Active', projects: [
+              { name: 'Libre UI',       mod: 'Today',       active: true  },
+              { name: 'Component Lab',  mod: 'Yesterday',   active: false },
+              { name: 'Token Sandbox',  mod: '3 days ago',  active: false },
+            ]},
+            { key: 'apps',    label: 'Apps', projects: [
+              { name: 'Fade Converter', mod: 'Last week',   active: false },
+              { name: 'Prism Viewer',   mod: 'Last week',   active: false },
+              { name: 'Stack Editor',   mod: '2 weeks ago', active: false },
+            ]},
+            { key: 'archive', label: 'Archive', projects: [
+              { name: 'Motion Demos',       mod: 'Last month', active: false },
+              { name: 'Accessibility Pass', mod: 'Last month', active: false },
+            ]},
+          ] as folder}
+            <div class="pm-folder">
+              <button class="pm-folder-hd" onclick={() => { pmOpenFolders = { ...pmOpenFolders, [folder.key]: !pmOpenFolders[folder.key] }; }}>
+                <svg class="pm-folder-chevron" class:pm-folder-chevron-open={pmOpenFolders[folder.key]}
+                     width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="9 18 15 12 9 6"/>
                 </svg>
-              </div>
-              <div class="pm-project-meta">
-                <span class="pm-project-name">{p.name}</span>
-                <span class="pm-project-mod">{p.mod}</span>
-              </div>
-            </button>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                </svg>
+                <span class="pm-folder-name">{folder.label}</span>
+                <span class="pm-folder-count">{folder.projects.length}</span>
+              </button>
+              {#if pmOpenFolders[folder.key]}
+                {#each folder.projects as p}
+                  <button class="pm-project-row pm-project-indented" class:pm-project-active={p.active}>
+                    <div class="pm-project-ico">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                        <line x1="3" y1="9" x2="21" y2="9"/>
+                        <line x1="9" y1="21" x2="9" y2="9"/>
+                      </svg>
+                    </div>
+                    <div class="pm-project-meta">
+                      <span class="pm-project-name">{p.name}</span>
+                      <span class="pm-project-mod">{p.mod}</span>
+                    </div>
+                  </button>
+                {/each}
+              {/if}
+            </div>
           {/each}
         </div>
 
@@ -1882,8 +1921,8 @@
   /* ── Project Manager modal ─────────────────────────────────────────── */
   .pm-frame {
     position: relative;
-    width: 960px;
-    height: 600px;
+    width: 1200px;
+    height: 900px;
     border-radius: 12px;
     border: 1px solid var(--border);
     background: var(--surface-raised);
@@ -1931,7 +1970,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 14px 8px;
+    padding: 8px 14px 6px;
     flex-shrink: 0;
   }
 
@@ -1961,15 +2000,53 @@
   .pm-project-row {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     width: 100%;
-    padding: 8px 14px;
+    padding: 5px 14px;
     background: transparent;
     border: none;
     cursor: pointer;
     text-align: left;
     transition: background 0.08s;
   }
+
+  .pm-folder { display: flex; flex-direction: column; }
+
+  .pm-folder-hd {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 4px 10px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    text-align: left;
+    transition: background 0.08s, color 0.08s;
+  }
+  .pm-folder-hd:hover { background: color-mix(in srgb, var(--text-primary) 4%, transparent); color: var(--text-secondary); }
+
+  .pm-folder-chevron { transition: transform 0.15s; flex-shrink: 0; }
+  .pm-folder-chevron-open { transform: rotate(90deg); }
+
+  .pm-folder-name {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    flex: 1;
+  }
+
+  .pm-folder-count {
+    font-size: 10px;
+    color: var(--text-muted);
+    background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+    border-radius: 8px;
+    padding: 1px 5px;
+  }
+
+  .pm-project-indented { padding-left: 28px; }
   .pm-project-row:hover { background: color-mix(in srgb, var(--text-primary) 4%, transparent); }
   .pm-project-active { background: color-mix(in srgb, var(--accent) 10%, transparent) !important; }
 
@@ -1997,10 +2074,10 @@
     flex: 1;
     min-width: 0;
     overflow-y: auto;
-    padding: 24px 28px;
+    padding: 18px 28px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
   }
 
   .pm-detail-hero {
