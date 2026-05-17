@@ -1,7 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { Toaster, GlobalTabs } from '@libre/ui';
-  import ThemeLab from './lib/ThemeLab.svelte';
   import AppPanels from './lib/AppPanels.svelte';
   import TokensSection from './sections/TokensSection.svelte';
   import ButtonsSection from './sections/ButtonsSection.svelte';
@@ -30,7 +29,7 @@
 
   const sections = [
     { id: 'demo',       label: 'Demo Layouts',      component: DemoTilesSection,  tab: 'overview'    },
-    { id: 'buttons',    label: 'Buttons & Actions', component: ButtonsSection,    tab: 'components'  },
+    { id: 'buttons',    label: 'Buttons',           component: ButtonsSection,    tab: 'components'  },
     { id: 'form',       label: 'Form Controls',     component: FormSection,       tab: 'components'  },
     { id: 'feedback',   label: 'Feedback',          component: FeedbackSection,   tab: 'components'  },
     { id: 'navigation', label: 'Navigation',        component: NavigationSection, tab: 'components'  },
@@ -54,6 +53,9 @@
   const TABS_FOUNDATION = [
     { id: 'foundation',   label: 'Foundation' },
     { id: 'surface',      label: 'Surface'     },
+  ];
+
+  const TABS_COMPONENTS = [
     { id: 'components',   label: 'Components'  },
   ];
 
@@ -93,8 +95,21 @@
   let aboutClosing = $state(false);
 
   // ── Top bar state ──────────────────────────────────────────────────────
-  let activeTab = $state('overview');
+  let activeTab = $state(localStorage.getItem('libre-gallery-tab') || 'overview');
   $effect(() => { canvas.activeTab = activeTab; });
+  $effect(() => { localStorage.setItem('libre-gallery-tab', activeTab); });
+
+  // ── Scroll persistence ─────────────────────────────────────────────────
+  const SCROLL_KEY = 'libre-gallery-scroll-v1';
+  const scrollPositions = (() => { try { return JSON.parse(localStorage.getItem(SCROLL_KEY) || '{}'); } catch { return {}; } })();
+  let scrollSaveTimer = null;
+  function onContentScroll() {
+    clearTimeout(scrollSaveTimer);
+    scrollSaveTimer = setTimeout(() => {
+      scrollPositions[activeTab] = contentEl.scrollTop;
+      localStorage.setItem(SCROLL_KEY, JSON.stringify(scrollPositions));
+    }, 5000);
+  }
   let projectName = $state('Libre UI');
   let panelsCollapsed = $state(localStorage.getItem('libre-panels-collapsed') === 'true');
 
@@ -272,10 +287,21 @@
   });
 
   $effect(() => {
-    // Reset scroll + nav highlight whenever the active tab changes.
+    // Restore saved scroll position (or top) whenever the active tab changes.
     visibleSections;
     active = visibleSections[0]?.id ?? '';
-    contentEl?.scrollTo({ top: 0, behavior: 'instant' });
+    contentEl?.scrollTo({ top: scrollPositions[activeTab] ?? 0, behavior: 'instant' });
+  });
+
+  $effect(() => {
+    if (!contentEl) return;
+    contentEl.addEventListener('wheel', onWheel, { passive: false });
+    contentEl.addEventListener('scroll', onContentScroll, { passive: true });
+    return () => {
+      contentEl.removeEventListener('wheel', onWheel);
+      contentEl.removeEventListener('scroll', onContentScroll);
+      clearTimeout(scrollSaveTimer);
+    };
   });
 
   $effect(() => {
@@ -296,7 +322,16 @@
   });
 
   function scrollTo(id) {
-    contentEl?.querySelector(`#${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const el = contentEl?.querySelector(`#${id}`);
+    if (!el) return;
+    const z = parseFloat(document.documentElement.style.zoom) || 1;
+    const top = (el.getBoundingClientRect().top - contentEl.getBoundingClientRect().top) / z + contentEl.scrollTop - 5;
+    contentEl.scrollTo({ top, behavior: 'smooth' });
+  }
+
+  function onWheel(e) {
+    e.preventDefault();
+    contentEl.scrollTop += e.deltaY * 2;
   }
 
   function onKeydown(e) {
@@ -444,6 +479,8 @@
       <div class="tab-groups">
         <GlobalTabs tabs={TABS_FOUNDATION} bind:active={activeTab} />
         <div class="tab-group-sep"></div>
+        <GlobalTabs tabs={TABS_COMPONENTS} bind:active={activeTab} color="#3a9e5f" />
+        <div class="tab-group-sep"></div>
         <GlobalTabs tabs={TABS_APPS} bind:active={activeTab} color="#e07a2f" />
       </div>
     </div>
@@ -564,24 +601,17 @@
     </div>
   </div>
 
-  <div class="main-row">
-    <aside class="sidebar">
-      <nav>
-        {#each visibleSections as s}
-          <button
-            class="nav-item"
-            class:nav-active={active === s.id}
-            onclick={() => scrollTo(s.id)}
-          >
-            {s.label}
-          </button>
-        {/each}
-      </nav>
-      <div class="sidebar-bottom">
-        <ThemeLab bind:dark />
-      </div>
-    </aside>
+  <div class="sub-bar">
+    {#each visibleSections as s}
+      <button
+        class="sub-tab"
+        class:sub-tab-active={active === s.id}
+        onclick={() => scrollTo(s.id)}
+      >{s.label}</button>
+    {/each}
+  </div>
 
+  <div class="main-row">
     <MiniMap {contentEl} visible={activeTab === 'components' || activeTab === 'applications' || activeTab === 'foundation' || activeTab === 'surface' || activeTab === 'overview'} />
 
     <main class="content" bind:this={contentEl} onmousemove={onAppMove} onmouseleave={onAppLeave}>
@@ -590,6 +620,8 @@
           <h1 class="section-h1">{s.label}</h1>
           {#if s.id === 'feedback'}
             <FeedbackSection {toaster} />
+          {:else if s.id === 'tokens'}
+            <TokensSection bind:dark />
           {:else}
             <svelte:component this={s.component} />
           {/if}
@@ -1168,42 +1200,64 @@
     color: var(--text-primary);
   }
 
+  .sub-bar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    height: 34px;
+    padding: 0 8px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-panel);
+    gap: 2px;
+    overflow-x: auto;
+  }
+
+  .sub-tab {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    background: transparent;
+    border: none;
+    font-size: 12px;
+    font-family: inherit;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 0.1s;
+    border-radius: 0;
+  }
+
+  .sub-tab::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 8px;
+    right: 8px;
+    height: 2px;
+    border-radius: 1px 1px 0 0;
+    background: var(--accent);
+    opacity: 0;
+    transition: opacity 0.1s;
+  }
+
+  .sub-tab:hover { color: var(--text-secondary); }
+
+  .sub-tab-active {
+    color: var(--text-primary) !important;
+    font-weight: 600;
+  }
+
+  .sub-tab-active::after { opacity: 1; }
+
   .main-row {
     flex: 1;
     min-height: 0;
     display: flex;
     flex-direction: row;
   }
-
-  .sidebar {
-    width: 200px;
-    flex-shrink: 0;
-    border-right: 1px solid var(--border);
-    background: var(--surface-panel);
-    display: flex;
-    flex-direction: column;
-  }
-
-  .sidebar-bottom { flex-shrink: 0; }
-
-  nav { padding: 8px; flex: 1; min-height: 0; overflow-y: auto; }
-
-  .nav-item {
-    display: block;
-    width: 100%;
-    text-align: left;
-    padding: 7px 10px;
-    background: none;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 13px;
-    font-family: inherit;
-    color: var(--text-secondary);
-    transition: color 0.1s, background 0.1s;
-  }
-  .nav-item:hover { color: #fff; }
-  .nav-active { color: var(--text-primary) !important; background: var(--surface-raised) !important; font-weight: 500; }
 
   .content {
     flex: 1;
@@ -2235,9 +2289,6 @@
   .gear-btn:hover {
     background: color-mix(in srgb, var(--text-primary) 7%, transparent);
     color: var(--text-primary);
-  }
-  .sidebar-toggle-active {
-    color: var(--text-secondary);
   }
 
   /* ── Settings modal ────────────────────────────────────────────────── */

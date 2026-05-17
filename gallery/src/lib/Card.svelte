@@ -684,6 +684,7 @@
     gap: 12px;
     flex-wrap: wrap;
     border-radius: 10px;
+    width: 100%;
   }
 
   .card-content.flush {

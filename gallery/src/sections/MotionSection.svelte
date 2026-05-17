@@ -35,13 +35,6 @@
     } catch { return null; }
   }
 
-  function saveMotionStorage() {
-    localStorage.setItem(MOTION_STORAGE_KEY, JSON.stringify({
-      beziers:   Object.fromEntries(Object.entries(savedBeziers).map(([k, v]) => [k, [...v]])),
-      durations: { ...durations },
-    }));
-  }
-
   const _stored = loadMotionStorage();
 
   let durations = $state(_stored?.durations ?? { ...DURATION_DEFAULTS });
@@ -58,6 +51,11 @@
       : Object.fromEntries(Object.entries(BEZIER_DEFAULTS).map(([k, v]) => [k, [...v]]))
   );
 
+  // Easing curve direction — applied to BOTH minimize and restore identically.
+  // 'forward'  — cubic-bezier(0.38, 0, 0.13, 1) — sharp departure, gentle arrival
+  // 'reversed' — cubic-bezier(0.87, 0, 0.62, 1) — gentle departure, sharp arrival
+  let curveDir = $state(_stored?.curveDir ?? 'forward');
+
   // Window minimize/restore demo — each variant is fully independent
   let variants = $state(
     _stored?.variants?.length
@@ -68,20 +66,20 @@
         ]
   );
 
+  // Auto-save everything on any change
   $effect(() => {
-    try {
-      const cur = loadMotionStorage() ?? {};
-      localStorage.setItem(MOTION_STORAGE_KEY, JSON.stringify({
-        ...cur,
-        variants: variants.map(v => ({ label: v.label, dur: v.dur })),
-      }));
-    } catch {}
+    localStorage.setItem(MOTION_STORAGE_KEY, JSON.stringify({
+      beziers:   Object.fromEntries(Object.entries(beziers).map(([k, v]) => [k, [...v]])),
+      durations: { ...durations },
+      curveDir,
+      variants:  variants.map(v => ({ label: v.label, dur: v.dur })),
+      xEase, yEase, playDur,
+    }));
   });
 
-  // Easing curve direction — applied to BOTH minimize and restore identically.
-  // 'forward'  — cubic-bezier(0.38, 0, 0.13, 1) — sharp departure, gentle arrival
-  // 'reversed' — cubic-bezier(0.87, 0, 0.62, 1) — gentle departure, sharp arrival
-  let curveDir = $state('forward');
+  function saveMotionStorage() {
+    // kept for BezierEditor onSave callback — auto-save already handles it
+  }
   const CURVES = {
     forward:  'cubic-bezier(0.38, 0.00, 0.13, 1.00)',
     reversed: 'cubic-bezier(0.87, 0.00, 0.62, 1.00)',
@@ -95,17 +93,51 @@
     return () => timers.forEach(clearInterval);
   });
 
-  // Animation playground state
-  let playing = $state(false);
-  let activeEase = $state('--ease-out');
-  let animKey = $state(0);
+  // 2D playground state
+  let xEase   = $state(_stored?.xEase   ?? '--ease-out');
+  let yEase   = $state(_stored?.yEase   ?? '--ease-hard');
+  let playDur = $state(_stored?.playDur ?? 0.6);
+  let dotX = $state(0);
+  let dotY = $state(1);
+  let isAnimating = $state(false);
+  let _rafId;
 
-  function play(tokenName) {
-    activeEase = tokenName;
-    playing = false;
-    // force reflow so CSS animation restarts
-    animKey += 1;
-    requestAnimationFrame(() => { playing = true; });
+  function cubicBezierEval(p, x1, y1, x2, y2) {
+    let lo = 0, hi = 1, t = p;
+    for (let i = 0; i < 20; i++) {
+      const cx = 3*x1*t*(1-t)*(1-t) + 3*x2*t*t*(1-t) + t*t*t;
+      if (Math.abs(cx - p) < 0.00005) break;
+      if (cx < p) lo = t; else hi = t;
+      t = (lo + hi) / 2;
+    }
+    return 3*y1*t*(1-t)*(1-t) + 3*y2*t*t*(1-t) + t*t*t;
+  }
+
+  function play2d() {
+    if (_rafId) {
+      cancelAnimationFrame(_rafId);
+      _rafId = null;
+      isAnimating = false;
+      dotX = 0;
+      dotY = 1;
+      return;
+    }
+    dotX = 0;
+    dotY = 1;
+    isAnimating = true;
+    const t0 = performance.now();
+    const dur = Math.max(playDur * 1000, 1);
+
+    function tick(now) {
+      const p = Math.min((now - t0) / dur, 1);
+      const [xx1, xy1, xx2, xy2] = beziers[xEase];
+      const [yx1, yy1, yx2, yy2] = beziers[yEase];
+      dotX = cubicBezierEval(p, xx1, xy1, xx2, xy2);
+      dotY = 1 - cubicBezierEval(p, yx1, yy1, yx2, yy2);
+      if (p < 1) { _rafId = requestAnimationFrame(tick); }
+      else { isAnimating = false; _rafId = null; }
+    }
+    _rafId = requestAnimationFrame(tick);
   }
 </script>
 
@@ -162,42 +194,82 @@
 
   <!-- ── Playground ─────────────────────────────────────────────── -->
   <h2 class="group-title">Playground</h2>
-  <div class="playground">
-    <div class="playground-controls">
-      {#each motionTokens as t}
-        {@const [x1, y1, x2, y2] = beziers[t.name]}
-        <button
-          class="ease-btn"
-          class:active={activeEase === t.name}
-          onclick={() => play(t.name)}
-        >
-          <svg class="ease-thumb" viewBox="0 0 40 40" width="40" height="40">
-            <path
-              d="M 4 36 C {4 + x1*32} {36 - y1*32} {4 + x2*32} {36 - y2*32} 36 4"
-              fill="none" stroke="currentColor" stroke-width="1.5"
-            />
-          </svg>
-          <span>{t.label}</span>
+  <div class="playground2d">
+
+    <div class="axis-selectors">
+      <div class="axis-row">
+        <span class="axis-label">X</span>
+        {#each motionTokens as t}
+          {@const [x1, y1, x2, y2] = beziers[t.name]}
+          <button class="ease-btn" class:active={xEase === t.name} onclick={() => xEase = t.name}>
+            <svg class="ease-thumb" viewBox="0 0 40 40" width="32" height="32">
+              <path d="M 4 36 C {4+x1*32} {36-y1*32} {4+x2*32} {36-y2*32} 36 4"
+                fill="none" stroke="currentColor" stroke-width="1.5" />
+            </svg>
+            <span>{t.label}</span>
+          </button>
+        {/each}
+      </div>
+      <div class="axis-row">
+        <span class="axis-label">Y</span>
+        {#each motionTokens as t}
+          {@const [x1, y1, x2, y2] = beziers[t.name]}
+          <button class="ease-btn" class:active={yEase === t.name} onclick={() => yEase = t.name}>
+            <svg class="ease-thumb" viewBox="0 0 40 40" width="32" height="32">
+              <path d="M 4 36 C {4+x1*32} {36-y1*32} {4+x2*32} {36-y2*32} 36 4"
+                fill="none" stroke="currentColor" stroke-width="1.5" />
+            </svg>
+            <span>{t.label}</span>
+          </button>
+        {/each}
+      </div>
+    </div>
+
+    <div class="graph-row">
+      <div class="graph2d">
+        <svg class="graph2d-svg" viewBox="0 0 300 300" preserveAspectRatio="none">
+          <line x1="75"  y1="0"   x2="75"  y2="300" stroke="currentColor" opacity="0.07" />
+          <line x1="150" y1="0"   x2="150" y2="300" stroke="currentColor" opacity="0.07" />
+          <line x1="225" y1="0"   x2="225" y2="300" stroke="currentColor" opacity="0.07" />
+          <line x1="0"   y1="75"  x2="300" y2="75"  stroke="currentColor" opacity="0.07" />
+          <line x1="0"   y1="150" x2="300" y2="150" stroke="currentColor" opacity="0.07" />
+          <line x1="0"   y1="225" x2="300" y2="225" stroke="currentColor" opacity="0.07" />
+          <line x1="0" y1="300" x2="300" y2="0" stroke="currentColor" opacity="0.14" stroke-dasharray="5 4" />
+          <circle cx="5" cy="295" r="3.5" fill="currentColor" opacity="0.25" />
+          <circle cx="295" cy="5" r="3.5" fill="currentColor" opacity="0.25" />
+        </svg>
+        <div
+          class="dot2d"
+          style="left: calc({dotX} * (100% - 16px)); top: calc({dotY} * (100% - 16px));"
+        ></div>
+      </div>
+
+      <div class="graph-controls">
+        <div class="speed-control">
+          <div class="speed-header">
+            <span class="speed-label">Speed</span>
+            <code class="speed-value">{playDur.toFixed(2)}s</code>
+          </div>
+          <input
+            type="range"
+            class="speed-slider"
+            min="0"
+            max="2"
+            step="0.01"
+            bind:value={playDur}
+          />
+          <div class="speed-ticks">
+            <span>0s</span>
+            <span>1s</span>
+            <span>2s</span>
+          </div>
+        </div>
+        <button class="play-btn2d" onclick={play2d}>
+          {isAnimating ? '◼ Stop' : '▶ Play'}
         </button>
-      {/each}
+      </div>
     </div>
-    <div class="playground-track">
-      {#key animKey}
-        {#if playing}
-          {@const [x1, y1, x2, y2] = beziers[activeEase]}
-          {@const dur = durations[activeEase]}
-          <div
-            class="playground-dot"
-            style="
-              animation: slide-dot {dur}ms cubic-bezier({x1},{y1},{x2},{y2}) forwards;
-            "
-          ></div>
-        {:else}
-          <div class="playground-dot"></div>
-        {/if}
-      {/key}
-    </div>
-    <button class="play-btn" onclick={() => play(activeEase)}>Play</button>
+
   </div>
 
   <!-- ── Window — Minimize / Restore ──────────────────────────── -->
@@ -649,4 +721,139 @@
     background: color-mix(in srgb, var(--accent) 12%, transparent);
     color: var(--accent);
   }
+
+  /* ── 2D Playground ── */
+  .playground2d {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 24px;
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+  }
+
+  .axis-selectors {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .axis-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .axis-label {
+    width: 14px;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'Geist Mono', monospace;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+  }
+
+  .graph-row {
+    display: flex;
+    gap: 28px;
+    align-items: flex-start;
+  }
+
+  .graph2d {
+    width: 340px;
+    height: 340px;
+    flex-shrink: 0;
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+
+  .graph2d-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    color: var(--text-primary);
+  }
+
+  .dot2d {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    position: absolute;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent);
+    transition: box-shadow 120ms;
+  }
+
+  .graph-controls {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 4px 0;
+    height: 340px;
+  }
+
+  .speed-control {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .speed-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  .speed-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+  }
+
+  .speed-value {
+    font-size: 11px;
+    font-family: 'Geist Mono', monospace;
+    color: var(--text-secondary);
+  }
+
+  .speed-slider {
+    width: 160px;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+
+  .speed-ticks {
+    display: flex;
+    justify-content: space-between;
+    width: 160px;
+    font-size: 9px;
+    font-family: 'Geist Mono', monospace;
+    color: var(--text-muted);
+  }
+
+  .play-btn2d {
+    align-self: flex-start;
+    padding: 7px 20px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 120ms;
+    letter-spacing: 0.02em;
+  }
+
+  .play-btn2d:hover { background: var(--accent-hover); }
 </style>

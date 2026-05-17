@@ -56,13 +56,24 @@
       const sTop = elOffsetTop(sec) * yR;
       const sH   = sec.offsetHeight * yR;
 
-      // ── Section h1 ────────────────────────────────────────────────────────
+      // ── Section h1 — render as legible text label, sized to fit width ────
       const h1 = sec.querySelector('h1.section-h1');
       if (h1) {
-        const hTop = elOffsetTop(h1) * yR;
-        const hH   = Math.max(3, h1.offsetHeight * yR);
-        ctx.fillStyle = isDark ? 'rgba(255,255,255,0.28)' : 'rgba(0,0,0,0.20)';
-        ctx.fillRect(4, hTop, W - 8, hH);
+        const hTop  = elOffsetTop(h1) * yR;
+        const hH    = Math.max(8, h1.offsetHeight * yR);
+        const label = h1.textContent.trim();
+        const maxW  = W - 8;
+        ctx.save();
+        // Measure at reference size, scale to fill ~90% of available width
+        const refSize = 12;
+        ctx.font = `600 ${refSize}px -apple-system, system-ui, sans-serif`;
+        const refW    = ctx.measureText(label).width;
+        const fontSize = Math.min(11, Math.max(5, (maxW / refW) * refSize * 0.9));
+        ctx.font = `600 ${fontSize}px -apple-system, system-ui, sans-serif`;
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, 4, hTop + hH / 2);
+        ctx.restore();
         ctx.fillStyle = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)';
         ctx.fillRect(4, hTop + hH, W - 8, 0.5);
       }

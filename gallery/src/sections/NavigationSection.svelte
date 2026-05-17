@@ -2,15 +2,21 @@
   import { Tabs, Menu, GlobalTabs, PanelTabs, SegmentedControl } from '@libre/ui';
   import Card from '../lib/Card.svelte';
 
-  let activeTab2 = $state('');
-  let activeTab3 = $state('');
+  const NAV_KEY = 'libre-navigation';
+  function _loadNav() {
+    try { return JSON.parse(localStorage.getItem(NAV_KEY) ?? 'null'); } catch { return null; }
+  }
+  const _nav = _loadNav();
+
+  let activeTab2 = $state(_nav?.activeTab2 ?? '');
+  let activeTab3 = $state(_nav?.activeTab3 ?? '');
   let menuOpen = $state(false);
   let menuAnchor = $state(null);
 
   let compactQuery   = $state('');
   let prominentQuery = $state('');
 
-  let globalActive = $state('overview');
+  let globalActive = $state(_nav?.globalActive ?? 'overview');
   const globalTabs = [
     { id: 'overview',   label: 'Overview' },
     { id: 'components', label: 'Components' },
@@ -18,14 +24,14 @@
     { id: 'tokens',     label: 'Tokens' },
   ];
 
-  let panelActive = $state('media');
+  let panelActive = $state(_nav?.panelActive ?? 'media');
   const panelTabs = [
     { id: 'media',   label: 'Media' },
     { id: 'effects', label: 'Effects' },
     { id: 'source',  label: 'Source' },
   ];
 
-  let trackZoom = $state('expanded');
+  let trackZoom = $state(_nav?.trackZoom ?? 'expanded');
   const trackZoomOptions = [
     {
       value: 'compact',
@@ -74,6 +80,10 @@
     menuAnchor = e.currentTarget;
     menuOpen = true;
   }
+
+  $effect(() => {
+    localStorage.setItem(NAV_KEY, JSON.stringify({ activeTab2, activeTab3, globalActive, panelActive, trackZoom }));
+  });
 </script>
 
 <!-- Snippets for Tabs panels — must be defined in template scope -->

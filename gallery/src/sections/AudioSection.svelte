@@ -254,7 +254,7 @@
 <style>
   .audio-section {
     padding: 32px 40px 64px;
-    max-width: 760px;
+    max-width: 1200px;
   }
 
   h2 {
@@ -284,8 +284,8 @@
   }
 
   .sound-grid {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 2px;
   }
 

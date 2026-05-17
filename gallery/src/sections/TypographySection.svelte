@@ -18,8 +18,14 @@
     { name: 'Inconsolata',  family: '"Inconsolata", monospace',  gf: 'Inconsolata:wght@400;500;600' },
   ];
 
-  let headingFont = $state('Geist');
-  let monoFont    = $state('Geist Mono');
+  const TYPO_KEY = 'libre-typography';
+  function _loadTypo() {
+    try { return JSON.parse(localStorage.getItem(TYPO_KEY) ?? 'null'); } catch { return null; }
+  }
+  const _typo = _loadTypo();
+
+  let headingFont = $state(_typo?.headingFont ?? 'Geist');
+  let monoFont    = $state(_typo?.monoFont    ?? 'Geist Mono');
 
   let headingFamily = $derived(
     FONT_OPTIONS.find(f => f.name === headingFont)?.family ?? 'Geist, system-ui, sans-serif'
@@ -36,6 +42,20 @@
     link.href = `https://fonts.googleapis.com/css2?family=${gfParam}&display=swap`;
     document.head.appendChild(link);
   }
+
+  // Re-inject any non-default Google Fonts on init
+  if (_typo?.headingFont && _typo.headingFont !== 'Geist') {
+    const opt = FONT_OPTIONS.find(f => f.name === _typo.headingFont);
+    if (opt?.gf) { loadGF(opt.gf); loaded.add(opt.name); }
+  }
+  if (_typo?.monoFont && _typo.monoFont !== 'Geist Mono') {
+    const opt = MONO_OPTIONS.find(f => f.name === _typo.monoFont);
+    if (opt?.gf) { loadGF(opt.gf); loaded.add(opt.name); }
+  }
+
+  $effect(() => {
+    localStorage.setItem(TYPO_KEY, JSON.stringify({ headingFont, monoFont }));
+  });
 
   function pickHeadingFont(e) {
     const name = e.target.value;

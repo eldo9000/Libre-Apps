@@ -110,7 +110,7 @@
     display: block;
     font-size: 15px;
     line-height: 1;
-    text-align: left;
+    text-align: right;
   }
   .tc-frames { text-align: center; }
 

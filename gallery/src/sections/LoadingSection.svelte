@@ -1,6 +1,9 @@
 <script>
   import Card from '../lib/Card.svelte';
 
+  // Bars
+  let barsRunning = $state(true);
+
   // Skeleton list
   let listState = $state('idle'); // idle | loading | loaded
   function loadList() {
@@ -57,20 +60,26 @@
 <div class="section">
 
   <!-- ── Bars ──────────────────────────────────────────────────── -->
-  <h2 class="group-title">Bars</h2>
+  <div class="group-hd">
+    <h2 class="group-title">Bars</h2>
+    <div class="state-toggle">
+      <button class:active={barsRunning}  onclick={() => barsRunning = true}>Running</button>
+      <button class:active={!barsRunning} onclick={() => barsRunning = false}>Paused</button>
+    </div>
+  </div>
   <div class="grid">
     <Card id="LOAD-1" label="Indeterminate — Sweep">
-      <div class="bar-demo">
+      <div class="bar-demo" class:bars-paused={!barsRunning}>
         <div class="bar-track"><div class="bar-sweep"></div></div>
       </div>
     </Card>
     <Card id="LOAD-2" label="Indeterminate — Bounce">
-      <div class="bar-demo">
+      <div class="bar-demo" class:bars-paused={!barsRunning}>
         <div class="bar-track"><div class="bar-bounce"></div></div>
       </div>
     </Card>
     <Card id="LOAD-3" label="Indeterminate — Pulse">
-      <div class="bar-demo">
+      <div class="bar-demo" class:bars-paused={!barsRunning}>
         <div class="bar-track bar-track-pulse"><div class="bar-pulse-fill"></div></div>
       </div>
     </Card>
@@ -295,6 +304,33 @@
 <style>
   .section { max-width: 1125px; }
 
+  .group-hd {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin: 32px 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .group-hd .group-title { margin: 0; padding: 0; border: none; }
+
+  .state-toggle { display: flex; gap: 2px; }
+  .state-toggle button {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 5px;
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background 80ms, color 80ms;
+  }
+  .state-toggle button:hover { color: var(--text-primary); }
+  .state-toggle button.active {
+    background: color-mix(in srgb, var(--surface) 75%, var(--text-primary));
+    color: var(--text-primary);
+  }
+
   .group-title {
     font-size: 22px;
     font-weight: 600;
@@ -365,6 +401,10 @@
     from { left: 0; }
     to   { left: 65%; }
   }
+
+  .bars-paused .bar-sweep,
+  .bars-paused .bar-bounce,
+  .bars-paused .bar-pulse-fill { animation-play-state: paused; }
 
   /* Pulse: full bar opacity cycles */
   .bar-track-pulse { overflow: visible; }

@@ -2,8 +2,18 @@
   import { SectionLabel, ScrollArea, TrafficLight } from '@libre/ui';
   import Card from '../lib/Card.svelte';
 
-  let sub1Open = $state(true);
-  let sub2Open = $state(false);
+  const LAYOUT_KEY = 'libre-layout';
+  function _loadLayout() {
+    try { return JSON.parse(localStorage.getItem(LAYOUT_KEY) ?? 'null'); } catch { return null; }
+  }
+  const _layout = _loadLayout();
+
+  let sub1Open = $state(_layout?.sub1Open ?? true);
+  let sub2Open = $state(_layout?.sub2Open ?? false);
+
+  $effect(() => {
+    localStorage.setItem(LAYOUT_KEY, JSON.stringify({ sub1Open, sub2Open }));
+  });
 </script>
 
 <div class="section">

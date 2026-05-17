@@ -100,6 +100,10 @@
     if (!isDirty) return;
     savedValue = [...value];
     if (name) document.documentElement.style.setProperty(name, bezierCss(value));
+    if (selectedPresetId !== null) {
+      const p = presets.find(x => x.id === selectedPresetId);
+      if (p) { p.value = [...value]; savePresetsStorage(); }
+    }
     onSave?.();
   }
 
@@ -202,192 +206,412 @@
     if (e.currentTarget.hasPointerCapture(drag.pointerId)) e.currentTarget.releasePointerCapture(drag.pointerId);
     drag = null;
   }
+
+  // ── Presets ──────────────────────────────────────────────────────────────
+  const PRESET_STORAGE_KEY = 'libre-bezier-presets';
+
+  const DEFAULT_PRESETS = [
+    { id: 1, name: 'Linear',       value: [0.33, 0.33, 0.67, 0.67], defaultValue: [0.33, 0.33, 0.67, 0.67] },
+    { id: 2, name: 'Ease',         value: [0.25, 0.10, 0.25, 1.00], defaultValue: [0.25, 0.10, 0.25, 1.00] },
+    { id: 3, name: 'Ease In',      value: [0.42, 0.00, 1.00, 1.00], defaultValue: [0.42, 0.00, 1.00, 1.00] },
+    { id: 4, name: 'Ease Out',     value: [0.00, 0.00, 0.58, 1.00], defaultValue: [0.00, 0.00, 0.58, 1.00] },
+    { id: 5, name: 'Ease In Out',  value: [0.42, 0.00, 0.58, 1.00], defaultValue: [0.42, 0.00, 0.58, 1.00] },
+    { id: 6, name: 'Sharp Out',    value: [0.00, 0.00, 0.13, 1.00], defaultValue: [0.00, 0.00, 0.13, 1.00] },
+    { id: 7, name: 'Spring',       value: [0.34, 1.56, 0.64, 1.00], defaultValue: [0.34, 1.56, 0.64, 1.00] },
+    { id: 8, name: 'Anticipate',   value: [0.36, 0.00, 0.66,-0.56], defaultValue: [0.36, 0.00, 0.66,-0.56] },
+  ];
+
+  function loadPresets() {
+    try {
+      const raw = localStorage.getItem(PRESET_STORAGE_KEY);
+      if (!raw) return DEFAULT_PRESETS.map(p => ({ ...p, value: [...p.value], defaultValue: [...p.defaultValue] }));
+      const parsed = JSON.parse(raw);
+      return DEFAULT_PRESETS.map(def => {
+        const stored = parsed.find(p => p.id === def.id);
+        return stored
+          ? { ...def, name: stored.name, value: [...stored.value] }
+          : { ...def, value: [...def.value], defaultValue: [...def.defaultValue] };
+      });
+    } catch {
+      return DEFAULT_PRESETS.map(p => ({ ...p, value: [...p.value], defaultValue: [...p.defaultValue] }));
+    }
+  }
+
+  function savePresetsStorage() {
+    try {
+      localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(
+        presets.map(p => ({ id: p.id, name: p.name, value: [...p.value] }))
+      ));
+    } catch {}
+  }
+
+  let presets        = $state(loadPresets());
+  let selectedPresetId = $state(null);
+  let editingPresetId  = $state(null);
+
+  function selectPreset(p) {
+    selectedPresetId = p.id;
+    value      = [...p.value];
+    savedValue = [...p.value];
+  }
+
+  function renamePreset(id, newName) {
+    const p = presets.find(x => x.id === id);
+    if (p && newName.trim()) { p.name = newName.trim(); savePresetsStorage(); }
+  }
+
+  function resetPreset(p) {
+    p.value = [...p.defaultValue];
+    savePresetsStorage();
+    if (selectedPresetId === p.id) { value = [...p.defaultValue]; savedValue = [...p.defaultValue]; }
+  }
 </script>
 
 <div class="be-root">
-  <svg
-    class="be-svg"
-    class:be-svg-dragging={drag !== null}
-    viewBox="0 0 120 120"
-    xmlns="http://www.w3.org/2000/svg"
-    bind:this={svgRef}
-    style="touch-action: none;"
-  >
-    {#each [30, 60, 90] as g}
-      <line x1={g} y1="0" x2={g} y2="120" stroke="var(--border-subtle)" stroke-width="0.5"/>
-      <line x1="0" y1={g} x2="120" y2={g} stroke="var(--border-subtle)" stroke-width="0.5"/>
-    {/each}
-    <rect x="0" y="0" width="120" height="120" fill="none" stroke="var(--border)" stroke-width="1"/>
-    {#if zoomedOut}
-      <rect
-        x={innerBoxX} y={innerBoxY}
-        width={innerBoxSz} height={innerBoxSz}
-        fill="none"
-        stroke="var(--text-muted)"
-        stroke-width="0.8"
-        opacity="0.7"
-      />
-    {/if}
-    <line
-      x1={anchor0.x} y1={anchor0.y}
-      x2={anchor1.x} y2={anchor1.y}
-      stroke="var(--text-muted)" stroke-width="0.8" stroke-dasharray="3 3" opacity="0.4"
-    />
-    <path d={bezierPath(value)} fill="none"
-      stroke={isDirty ? 'var(--accent)' : '#fff'}
-      stroke-width={isDirty ? 1.5 : 0.5}
-    />
-    <line x1={anchor0.x} y1={anchor0.y} x2={h.p1.x} y2={h.p1.y} stroke="var(--text-muted)" stroke-width="1" opacity="0.55"/>
-    <line x1={anchor1.x} y1={anchor1.y} x2={h.p2.x} y2={h.p2.y} stroke="var(--text-muted)" stroke-width="1" opacity="0.55"/>
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <circle
-      cx={h.p1.x} cy={h.p1.y}
-      r={isDirty ? 3 : 2}
-      fill={isDirty ? '#fff' : 'var(--accent)'}
-      stroke="var(--accent)" stroke-width="1.5"
-      class="be-handle"
-      class:be-handle-dragging={drag?.idx === 0}
-      onpointerdown={(e) => onHandleDown(e, 0)}
-      onpointermove={onHandleMove}
-      onpointerup={onHandleUp}
-      onpointercancel={onHandleUp}
-    />
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <circle
-      cx={h.p2.x} cy={h.p2.y}
-      r={isDirty ? 3 : 2}
-      fill={isDirty ? '#fff' : 'var(--accent)'}
-      stroke="var(--accent)" stroke-width="1.5"
-      class="be-handle"
-      class:be-handle-dragging={drag?.idx === 2}
-      onpointerdown={(e) => onHandleDown(e, 2)}
-      onpointermove={onHandleMove}
-      onpointerup={onHandleUp}
-      onpointercancel={onHandleUp}
-    />
-    <circle cx={anchor0.x} cy={anchor0.y} r="2.5" fill="var(--text-muted)"/>
-    <circle cx={anchor1.x} cy={anchor1.y} r="2.5" fill="var(--text-muted)"/>
-    {#if tracePos}
-      <circle
-        cx={tracePos.x} cy={tracePos.y} r="3"
-        fill="#ff8a3d" stroke="var(--surface)" stroke-width="1"
-        pointer-events="none"
-      />
-    {/if}
-  </svg>
 
-  <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
-  <div class="be-track" onclick={triggerAnimation}>
-    <div
-      class="be-pill"
-      class:be-pill-run={pillDir}
-      style="transition-duration: {resetting ? '0ms' : duration + 'ms'}; transition-timing-function: {pillDir ? bezierCss(value) : bezierCssReflected(value)};"
-    ></div>
-  </div>
-
-  <div class="be-actions">
-    <div class="be-action-group">
-      <button class="be-btn" onclick={reset} aria-label="Reset to linear" title="Reset to linear">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="3 12 3 6 9 6"/>
-          <path d="M3 12a9 9 0 1 0 3-6.7L3 6"/>
-        </svg>
-      </button>
-      <button
-        class="be-btn"
-        class:be-btn-active={pingPong}
-        onclick={() => (pingPong = !pingPong)}
-        aria-label="Toggle ping-pong"
-        title={pingPong ? 'Ping-pong: on' : 'Ping-pong: off'}
-      >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="3" y1="12" x2="21" y2="12"/>
-          <polyline points="7 7 2 12 7 17"/>
-          <polyline points="17 7 22 12 17 17"/>
-        </svg>
-      </button>
-    </div>
-
-    <div class="be-action-group">
-      <button
-        class="be-btn be-btn-save"
-        disabled={!isDirty}
-        onclick={save}
-        aria-label="Save changes"
-        title={isDirty ? 'Save changes' : 'No changes'}
-      >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-             stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="20 6 9 17 4 12"/>
-        </svg>
-      </button>
-      <button
-        class="be-btn be-btn-cancel"
-        disabled={!isDirty}
-        onclick={cancel}
-        aria-label="Cancel changes"
-        title={isDirty ? 'Cancel changes' : 'No changes'}
-      >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-             stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"/>
-          <line x1="6"  y1="6" x2="18" y2="18"/>
-        </svg>
-      </button>
-    </div>
-
-    <div class="be-action-group">
-      <div class="be-dur-wrap">
-        <input
-          type="number"
-          class="be-dur-input"
-          min="0.1"
-          max="10"
-          step="0.1"
-          value={duration / 1000}
-          oninput={(e) => {
-            const v = parseFloat(e.currentTarget.value);
-            if (!isNaN(v) && v >= 0.1) {
-              duration = Math.round(v * 1000);
-              onSave?.();
-            }
-          }}
+  <!-- ── Left column: graph + controls ── -->
+  <div class="be-left">
+    <svg
+      class="be-svg"
+      class:be-svg-dragging={drag !== null}
+      viewBox="0 0 120 120"
+      xmlns="http://www.w3.org/2000/svg"
+      bind:this={svgRef}
+      style="touch-action: none;"
+    >
+      {#each [30, 60, 90] as g}
+        <line x1={g} y1="0" x2={g} y2="120" stroke="var(--border-subtle)" stroke-width="0.5"/>
+        <line x1="0" y1={g} x2="120" y2={g} stroke="var(--border-subtle)" stroke-width="0.5"/>
+      {/each}
+      <rect x="0" y="0" width="120" height="120" fill="none" stroke="var(--border)" stroke-width="1"/>
+      {#if zoomedOut}
+        <rect
+          x={innerBoxX} y={innerBoxY}
+          width={innerBoxSz} height={innerBoxSz}
+          fill="none"
+          stroke="var(--text-muted)"
+          stroke-width="0.8"
+          opacity="0.7"
         />
-        <span class="be-dur-unit">s</span>
+      {/if}
+      <line
+        x1={anchor0.x} y1={anchor0.y}
+        x2={anchor1.x} y2={anchor1.y}
+        stroke="var(--text-muted)" stroke-width="0.8" stroke-dasharray="3 3" opacity="0.4"
+      />
+      <path d={bezierPath(value)} fill="none"
+        stroke={isDirty ? 'var(--accent)' : '#fff'}
+        stroke-width={isDirty ? 1.5 : 0.5}
+      />
+      <line x1={anchor0.x} y1={anchor0.y} x2={h.p1.x} y2={h.p1.y} stroke="var(--text-muted)" stroke-width="1" opacity="0.55"/>
+      <line x1={anchor1.x} y1={anchor1.y} x2={h.p2.x} y2={h.p2.y} stroke="var(--text-muted)" stroke-width="1" opacity="0.55"/>
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <circle
+        cx={h.p1.x} cy={h.p1.y}
+        r={isDirty ? 3 : 2}
+        fill={isDirty ? '#fff' : 'var(--accent)'}
+        stroke="var(--accent)" stroke-width="1.5"
+        class="be-handle"
+        class:be-handle-dragging={drag?.idx === 0}
+        onpointerdown={(e) => onHandleDown(e, 0)}
+        onpointermove={onHandleMove}
+        onpointerup={onHandleUp}
+        onpointercancel={onHandleUp}
+      />
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <circle
+        cx={h.p2.x} cy={h.p2.y}
+        r={isDirty ? 3 : 2}
+        fill={isDirty ? '#fff' : 'var(--accent)'}
+        stroke="var(--accent)" stroke-width="1.5"
+        class="be-handle"
+        class:be-handle-dragging={drag?.idx === 2}
+        onpointerdown={(e) => onHandleDown(e, 2)}
+        onpointermove={onHandleMove}
+        onpointerup={onHandleUp}
+        onpointercancel={onHandleUp}
+      />
+      <circle cx={anchor0.x} cy={anchor0.y} r="2.5" fill="var(--text-muted)"/>
+      <circle cx={anchor1.x} cy={anchor1.y} r="2.5" fill="var(--text-muted)"/>
+      {#if tracePos}
+        <circle
+          cx={tracePos.x} cy={tracePos.y} r="3"
+          fill="#ff8a3d" stroke="var(--surface)" stroke-width="1"
+          pointer-events="none"
+        />
+      {/if}
+    </svg>
+
+    <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
+    <div class="be-track" onclick={triggerAnimation}>
+      <div
+        class="be-pill"
+        class:be-pill-run={pillDir}
+        style="transition-duration: {resetting ? '0ms' : duration + 'ms'}; transition-timing-function: {pillDir ? bezierCss(value) : bezierCssReflected(value)};"
+      ></div>
+    </div>
+
+    <div class="be-actions">
+      <div class="be-action-group">
+        <button class="be-btn" onclick={reset} aria-label="Reset to linear" title="Reset to linear">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 12 3 6 9 6"/>
+            <path d="M3 12a9 9 0 1 0 3-6.7L3 6"/>
+          </svg>
+        </button>
+        <button
+          class="be-btn"
+          class:be-btn-active={pingPong}
+          onclick={() => (pingPong = !pingPong)}
+          aria-label="Toggle ping-pong"
+          title={pingPong ? 'Ping-pong: on' : 'Ping-pong: off'}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <polyline points="7 7 2 12 7 17"/>
+            <polyline points="17 7 22 12 17 17"/>
+          </svg>
+        </button>
       </div>
-      <button
-        class="be-btn"
-        class:be-btn-active={zoomedOut}
-        onclick={toggleZoom}
-        aria-label="Toggle zoomed-out view"
-        title={zoomedOut ? 'Zoomed out: handles can extend past 0–1' : 'Zoom out to edit beyond 0–1'}
-      >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="15 3 21 3 21 9"/>
-          <polyline points="9 21 3 21 3 15"/>
-          <line x1="21" y1="3"  x2="14" y2="10"/>
-          <line x1="3"  y1="21" x2="10" y2="14"/>
-        </svg>
-      </button>
+
+      <div class="be-action-group">
+        <button
+          class="be-btn be-btn-save"
+          disabled={!isDirty}
+          onclick={save}
+          aria-label="Save changes"
+          title={isDirty ? 'Save changes' : 'No changes'}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </button>
+        <button
+          class="be-btn be-btn-cancel"
+          disabled={!isDirty}
+          onclick={cancel}
+          aria-label="Cancel changes"
+          title={isDirty ? 'Cancel changes' : 'No changes'}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6"  y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="be-action-group">
+        <div class="be-dur-wrap">
+          <input
+            type="number"
+            class="be-dur-input"
+            min="0.1"
+            max="10"
+            step="0.1"
+            value={duration / 1000}
+            oninput={(e) => {
+              const v = parseFloat(e.currentTarget.value);
+              if (!isNaN(v) && v >= 0.1) {
+                duration = Math.round(v * 1000);
+                onSave?.();
+              }
+            }}
+          />
+          <span class="be-dur-unit">s</span>
+        </div>
+        <button
+          class="be-btn"
+          class:be-btn-active={zoomedOut}
+          onclick={toggleZoom}
+          aria-label="Toggle zoomed-out view"
+          title={zoomedOut ? 'Zoomed out: handles can extend past 0–1' : 'Zoom out to edit beyond 0–1'}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 3 21 3 21 9"/>
+            <polyline points="9 21 3 21 3 15"/>
+            <line x1="21" y1="3"  x2="14" y2="10"/>
+            <line x1="3"  y1="21" x2="10" y2="14"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="be-meta">
+      {#if name}<code class="be-token">{name}</code>{/if}
+      <span class="be-value">{bezierCssRounded(value)}</span>
     </div>
   </div>
 
-  <div class="be-meta">
-    {#if name}<code class="be-token">{name}</code>{/if}
-    <span class="be-value">{bezierCssRounded(value)}</span>
+  <!-- ── Presets column ── -->
+  <div class="be-presets">
+    <div class="be-presets-list">
+      {#each presets as p (p.id)}
+        <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
+        <div
+          class="be-preset-item"
+          class:active={selectedPresetId === p.id}
+          onclick={() => selectPreset(p)}
+        >
+          <svg class="be-preset-thumb" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+            <line x1="14" y1="0"  x2="14" y2="40" stroke="currentColor" opacity="0.1"/>
+            <line x1="26" y1="0"  x2="26" y2="40" stroke="currentColor" opacity="0.1"/>
+            <line x1="0"  y1="14" x2="40" y2="14" stroke="currentColor" opacity="0.1"/>
+            <line x1="0"  y1="26" x2="40" y2="26" stroke="currentColor" opacity="0.1"/>
+            <path
+              d="M 4 36 C {4 + p.value[0]*32} {36 - p.value[1]*32} {4 + p.value[2]*32} {36 - p.value[3]*32} 36 4"
+              fill="none" stroke="currentColor" stroke-width="1.6"
+            />
+          </svg>
+          <input
+            class="be-preset-name"
+            type="text"
+            value={p.name}
+            readonly={editingPresetId !== p.id}
+            onclick={(e) => editingPresetId === p.id && e.stopPropagation()}
+            ondblclick={(e) => { e.stopPropagation(); editingPresetId = p.id; e.currentTarget.select(); }}
+            onblur={(e) => { renamePreset(p.id, e.currentTarget.value); editingPresetId = null; }}
+            onkeydown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); e.stopPropagation(); }}
+          />
+          <button
+            class="be-preset-reset-btn"
+            onclick={(e) => { e.stopPropagation(); resetPreset(p); }}
+            title="Reset to default"
+            tabindex="-1"
+          >
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 12 3 6 9 6"/>
+              <path d="M3 12a9 9 0 1 0 3-6.7L3 6"/>
+            </svg>
+          </button>
+        </div>
+      {/each}
+    </div>
   </div>
+
 </div>
 
 <style>
   .be-root {
     display: flex;
+    flex-direction: row;
+    gap: 12px;
+    align-items: stretch;
+    width: 400px;
+    flex-shrink: 0;
+  }
+
+  .be-left {
+    display: flex;
     flex-direction: column;
     gap: 12px;
-    width: 320px;
+    width: 240px;
     flex-shrink: 0;
+  }
+
+  /* ── Presets panel ── */
+  .be-presets {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    align-self: flex-start;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .be-presets-list {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .be-preset-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 7px 3px 5px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background 80ms;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .be-preset-item:last-child { border-bottom: none; }
+
+  .be-preset-item:hover {
+    background: color-mix(in srgb, var(--text-primary) 5%, transparent);
+  }
+
+  .be-preset-item.active {
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+
+  .be-preset-item:hover .be-preset-reset-btn { opacity: 1; }
+
+  .be-preset-thumb {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    color: var(--text-secondary);
+    background: color-mix(in srgb, var(--text-primary) 5%, transparent);
+    border-radius: 3px;
+  }
+
+  .be-preset-item.active .be-preset-thumb { color: var(--accent); }
+
+  .be-preset-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 10px;
+    font-family: inherit;
+    color: var(--text-primary);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    padding: 2px 3px;
+    outline: none;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .be-preset-name:not([readonly]) {
+    cursor: text;
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+  }
+
+  .be-preset-reset-btn {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+    opacity: 0;
+    transition: opacity 80ms, background 80ms, color 80ms;
+  }
+
+  .be-preset-reset-btn:hover {
+    background: color-mix(in srgb, var(--text-primary) 10%, transparent);
+    color: var(--text-primary);
   }
 
   .be-svg {
