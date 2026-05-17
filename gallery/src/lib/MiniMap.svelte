@@ -77,8 +77,30 @@
         ctx.fill();
       }
 
+      // ── Card-free sections (e.g. Typography): render direct children as blocks
+      const cards = sec.querySelectorAll('.card');
+      if (cards.length === 0) {
+        const root = sec.querySelector('.section') ?? sec;
+        for (const child of root.children) {
+          if (child.classList.contains('section-h1') || child.classList.contains('group-title')) continue;
+          if (child.classList.contains('group-header')) continue;
+          if (child.classList.contains('group-desc') || child.classList.contains('section-desc')) continue;
+          if (child.tagName === 'P') continue;
+          if (!child.offsetHeight || child.offsetHeight < 24) continue;
+          const bx = Math.max(4, elOffsetLeft(child) * xS);
+          const by = elOffsetTop(child) * yR;
+          const bw = Math.min(child.offsetWidth * xS, W - bx - 4);
+          const bh = Math.max(2, child.offsetHeight * yR);
+          if (bw < 2) continue;
+          ctx.fillStyle = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
+          ctx.beginPath();
+          ctx.roundRect(bx, by, bw, bh, 1.5);
+          ctx.fill();
+        }
+      }
+
       // ── Cards ──────────────────────────────────────────────────────────────
-      for (const card of sec.querySelectorAll('.card')) {
+      for (const card of cards) {
         const cTop = elOffsetTop(card) * yR;
         const cH   = Math.max(6, card.offsetHeight * yR);
         const cX   = Math.max(4, elOffsetLeft(card) * xS);
@@ -104,6 +126,21 @@
         ctx.beginPath();
         ctx.roundRect(cX, cTop, cWmm, stripH, [2, 2, 0, 0]);
         ctx.fill();
+
+        // ── Card-frame: component block inside the card body ──────────────
+        const frameEl = card.querySelector('.card-frame');
+        if (frameEl && frameEl.offsetWidth && frameEl.offsetHeight) {
+          const fx = Math.max(cX + 1, elOffsetLeft(frameEl) * xS);
+          const fy = elOffsetTop(frameEl) * yR;
+          const fw = Math.min(frameEl.offsetWidth * xS, W - fx - 4);
+          const fh = Math.max(2, frameEl.offsetHeight * yR);
+          if (fw >= 2) {
+            ctx.fillStyle = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+            ctx.beginPath();
+            ctx.roundRect(fx, fy, fw, fh, 1.5);
+            ctx.fill();
+          }
+        }
       }
 
       // Section divider
