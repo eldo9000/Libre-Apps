@@ -582,7 +582,7 @@
       </div>
     </aside>
 
-    <MiniMap {contentEl} visible={activeTab === 'components' || activeTab === 'applications' || activeTab === 'foundation' || activeTab === 'surface'} />
+    <MiniMap {contentEl} visible={activeTab === 'components' || activeTab === 'applications' || activeTab === 'foundation' || activeTab === 'surface' || activeTab === 'overview'} />
 
     <main class="content" bind:this={contentEl} onmousemove={onAppMove} onmouseleave={onAppLeave}>
       {#each visibleSections as s}
