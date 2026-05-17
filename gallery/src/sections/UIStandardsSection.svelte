@@ -1,9 +1,51 @@
 <script>
-  import { GlobalTabs } from '@libre/ui';
+  import { GlobalTabs, Select, Toggle, Stepper } from '@libre/ui';
   import Card from '../lib/Card.svelte';
   import { canvas } from '../lib/stores/canvas.svelte.js';
 
-  let settingsTab = $state('general');
+  const UIS_KEY = 'libre-ui-standards';
+  function loadUis() {
+    try { return JSON.parse(localStorage.getItem(UIS_KEY) ?? 'null'); } catch { return null; }
+  }
+  const _s = loadUis();
+
+  let settingsTab      = $state(_s?.settingsTab      ?? 'general');
+  let settingsLaunch   = $state(_s?.settingsLaunch   ?? 'last');
+  let settingsTheme    = $state(_s?.settingsTheme    ?? 'system');
+  let settingsDensity  = $state(_s?.settingsDensity  ?? 'compact');
+  let settingsAutoSave = $state(_s?.settingsAutoSave  ?? true);
+  let saveInterval     = $state(_s?.saveInterval     ?? 30);
+  let miniPmProject    = $state(_s?.miniPmProject    ?? 'Libre UI');
+  let fullPmSelected   = $state(_s?.fullPmSelected   ?? 0);
+  let fullPmFolders    = $state(_s?.fullPmFolders    ?? { active: true, apps: true, archive: false });
+  let fullTbTabLeft    = $state(_s?.fullTbTabLeft    ?? 'foundation');
+  let fullTbTabRight   = $state(_s?.fullTbTabRight   ?? 'applications');
+  let fullTbTheme      = $state(_s?.fullTbTheme      ?? 'auto');
+
+  $effect(() => {
+    try {
+      localStorage.setItem(UIS_KEY, JSON.stringify({
+        settingsTab, settingsLaunch, settingsTheme, settingsDensity,
+        settingsAutoSave, saveInterval, miniPmProject, fullPmSelected,
+        fullPmFolders, fullTbTabLeft, fullTbTabRight, fullTbTheme,
+      }));
+    } catch {}
+  });
+
+  const launchItems  = [
+    { value: 'last',    label: 'Last project'    },
+    { value: 'new',     label: 'New project'     },
+    { value: 'manager', label: 'Project manager' },
+  ];
+  const themeItems   = [
+    { value: 'system', label: 'System' },
+    { value: 'light',  label: 'Light'  },
+    { value: 'dark',   label: 'Dark'   },
+  ];
+  const densityItems = [
+    { value: 'compact', label: 'Compact' },
+    { value: 'default', label: 'Default' },
+  ];
 
   const settingsTabs = [
     { id: 'general',    label: 'General'    },
@@ -19,13 +61,6 @@
     { name: 'Archive 2024',    modified: 'Jan 15'      },
   ];
 
-  let miniPmProject = $state('Libre UI');
-  let fullPmSelected = $state(0);
-  let fullPmFolders  = $state({ active: true, apps: true, archive: false });
-
-  let fullTbTabLeft  = $state('foundation');
-  let fullTbTabRight = $state('applications');
-  let fullTbTheme    = $state('auto');
   const ftbTabsFoundation = [
     { id: 'foundation', label: 'Tab 1' },
     { id: 'components', label: 'Tab 2' },
@@ -45,8 +80,20 @@
     <code>--titlebar-bg</code> background, <code>--border</code> bottom edge.
   </p>
   <Card id="UIS-1" label="Titlebar" effects={[
-    { label: 'Drop shadow',    value: '0 4px 16px / 10% opacity' },
-    { label: 'Ambient shadow', value: '0 1px 4px / 8% opacity'   },
+    { label: 'Drop shadow',    cssVar: '--eff-uiS1-drop',    cssOff: '0 0 0 0 transparent',
+      params: [
+        { label: 'Distance', key: 'y',      unit: 'px', min: 0, max: 40,  step: 1, value: 4  },
+        { label: 'Blur',     key: 'blur',   unit: 'px', min: 0, max: 60,  step: 1, value: 16 },
+        { label: 'Opacity',  key: 'opacity',unit: '%',  min: 0, max: 100, step: 1, value: 10 },
+      ],
+      template: (p) => `0 ${p.y}px ${p.blur}px rgba(0 0 0 / ${p.opacity / 100})` },
+    { label: 'Ambient shadow', cssVar: '--eff-uiS1-ambient', cssOff: '0 0 0 0 transparent',
+      params: [
+        { label: 'Distance', key: 'y',      unit: 'px', min: 0, max: 20,  step: 1, value: 1 },
+        { label: 'Blur',     key: 'blur',   unit: 'px', min: 0, max: 30,  step: 1, value: 4 },
+        { label: 'Opacity',  key: 'opacity',unit: '%',  min: 0, max: 100, step: 1, value: 8 },
+      ],
+      template: (p) => `0 ${p.y}px ${p.blur}px rgba(0 0 0 / ${p.opacity / 100})` },
   ]}>
     <div class="demo-block-padded">
       <div class="titlebar-frame">
@@ -217,8 +264,20 @@
     Titlebar at top, optional status bar at bottom, content fills the middle.
   </p>
   <Card id="UIS-3" label="WindowFrame" effects={[
-    { label: 'Drop shadow',         value: '0 8px 32px / 18% opacity' },
-    { label: 'Ambient shadow',      value: '0 2px 8px / 10% opacity'  },
+    { label: 'Drop shadow',    cssVar: '--eff-uiS3-drop',    cssOff: '0 0 0 0 transparent',
+      params: [
+        { label: 'Distance', key: 'y',      unit: 'px', min: 0, max: 60,  step: 1, value: 8  },
+        { label: 'Blur',     key: 'blur',   unit: 'px', min: 0, max: 80,  step: 1, value: 32 },
+        { label: 'Opacity',  key: 'opacity',unit: '%',  min: 0, max: 100, step: 1, value: 18 },
+      ],
+      template: (p) => `0 ${p.y}px ${p.blur}px rgba(0 0 0 / ${p.opacity / 100})` },
+    { label: 'Ambient shadow', cssVar: '--eff-uiS3-ambient', cssOff: '0 0 0 0 transparent',
+      params: [
+        { label: 'Distance', key: 'y',      unit: 'px', min: 0, max: 20,  step: 1, value: 2  },
+        { label: 'Blur',     key: 'blur',   unit: 'px', min: 0, max: 30,  step: 1, value: 8  },
+        { label: 'Opacity',  key: 'opacity',unit: '%',  min: 0, max: 100, step: 1, value: 10 },
+      ],
+      template: (p) => `0 ${p.y}px ${p.blur}px rgba(0 0 0 / ${p.opacity / 100})` },
   ]}>
     <div class="wf-mock">
       {#if canvas.osMode === 'macos'}
@@ -368,41 +427,26 @@
           <div class="settings-group">
             <div class="settings-row">
               <label class="settings-label">Open on launch</label>
-              <select class="settings-select">
-                <option>Last project</option>
-                <option>New project</option>
-                <option>Project manager</option>
-              </select>
+              <div class="settings-sel-wrap"><Select items={launchItems} bind:value={settingsLaunch} variant="flat" size="sm" /></div>
             </div>
             <div class="settings-row">
               <label class="settings-label">Auto-save</label>
-              <div class="settings-toggle settings-toggle-on"></div>
+              <Toggle bind:checked={settingsAutoSave} />
             </div>
             <div class="settings-row">
               <label class="settings-label">Save interval</label>
-              <div class="settings-stepper">
-                <button class="step-btn">−</button>
-                <span class="step-val">30s</span>
-                <button class="step-btn">+</button>
-              </div>
+              <Stepper bind:value={saveInterval} min={5} max={300} step={5} suffix="s" />
             </div>
           </div>
         {:else if settingsTab === 'appearance'}
           <div class="settings-group">
             <div class="settings-row">
               <label class="settings-label">Theme</label>
-              <select class="settings-select">
-                <option>System</option>
-                <option>Light</option>
-                <option>Dark</option>
-              </select>
+              <div class="settings-sel-wrap"><Select items={themeItems} bind:value={settingsTheme} variant="flat" size="sm" /></div>
             </div>
             <div class="settings-row">
               <label class="settings-label">Density</label>
-              <select class="settings-select">
-                <option>Compact</option>
-                <option>Default</option>
-              </select>
+              <div class="settings-sel-wrap"><Select items={densityItems} bind:value={settingsDensity} variant="flat" size="sm" /></div>
             </div>
           </div>
         {:else if settingsTab === 'shortcuts'}
@@ -419,14 +463,58 @@
     </div>
   </Card>
 
+  <!-- ── Settings — Mini ──────────────────────────────────────── -->
+  <h2 class="group-title">Settings — Mini</h2>
+  <p class="group-desc">
+    No titlebar, no sidebar, no action buttons. Raw content surface — settings rows presented directly.
+  </p>
+  <Card id="UIS-9" label="Settings — Mini" effects={[]}>
+    <div class="mini-settings-panel">
+      <div class="settings-group">
+        <div class="settings-row">
+          <label class="settings-label">Open on launch</label>
+          <div class="settings-sel-wrap"><Select items={launchItems} bind:value={settingsLaunch} variant="flat" size="sm" /></div>
+        </div>
+        <div class="settings-row">
+          <label class="settings-label">Auto-save</label>
+          <Toggle bind:checked={settingsAutoSave} />
+        </div>
+        <div class="settings-row">
+          <label class="settings-label">Save interval</label>
+          <Stepper bind:value={saveInterval} min={5} max={300} step={5} suffix="s" />
+        </div>
+        <div class="settings-row">
+          <label class="settings-label">Theme</label>
+          <div class="settings-sel-wrap"><Select items={themeItems} bind:value={settingsTheme} variant="flat" size="sm" /></div>
+        </div>
+        <div class="settings-row">
+          <label class="settings-label">Density</label>
+          <div class="settings-sel-wrap"><Select items={densityItems} bind:value={settingsDensity} variant="flat" size="sm" /></div>
+        </div>
+      </div>
+    </div>
+  </Card>
+
   <!-- ── Project Manager — Picker ─────────────────────────────── -->
   <h2 class="group-title">Project Manager — Picker</h2>
   <p class="group-desc">
     Top-bar document switcher. Trigger shows the current project name; dropdown opens with current project, new/open actions, and a recents list. Dismissed by clicking outside or switching projects.
   </p>
   <Card id="UIS-7" label="Project Manager — Picker" effects={[
-    { label: 'Dropdown shadow', value: '0 4px 16px / 12% opacity' },
-    { label: 'Ambient shadow',  value: '0 1px 4px / 8% opacity'   },
+    { label: 'Dropdown shadow', cssVar: '--eff-uiS7-drop',    cssOff: '0 0 0 0 transparent',
+      params: [
+        { label: 'Distance', key: 'y',      unit: 'px', min: 0, max: 40,  step: 1, value: 4  },
+        { label: 'Blur',     key: 'blur',   unit: 'px', min: 0, max: 60,  step: 1, value: 16 },
+        { label: 'Opacity',  key: 'opacity',unit: '%',  min: 0, max: 100, step: 1, value: 12 },
+      ],
+      template: (p) => `0 ${p.y}px ${p.blur}px rgba(0 0 0 / ${p.opacity / 100})` },
+    { label: 'Ambient shadow',  cssVar: '--eff-uiS7-ambient', cssOff: '0 0 0 0 transparent',
+      params: [
+        { label: 'Distance', key: 'y',      unit: 'px', min: 0, max: 20,  step: 1, value: 1 },
+        { label: 'Blur',     key: 'blur',   unit: 'px', min: 0, max: 30,  step: 1, value: 4 },
+        { label: 'Opacity',  key: 'opacity',unit: '%',  min: 0, max: 100, step: 1, value: 8 },
+      ],
+      template: (p) => `0 ${p.y}px ${p.blur}px rgba(0 0 0 / ${p.opacity / 100})` },
   ]}>
     <div class="dp-stage">
       <button class="dp-trigger dp-trigger-open">
@@ -483,9 +571,14 @@
     Full-size project manager. Opened via the home icon in the top-bar right group.
     Two-panel layout: project list left, project detail right. Backdrop-dismissed.
   </p>
-  <Card id="UIS-8" label="Project Manager — Full" effects={[
-    { label: 'Backdrop scrim', value: 'rgba 0,0,0 / 40% opacity' },
+  <Card id="UIS-8" label="Project Manager — Full" flush effects={[
+    { label: 'Backdrop scrim', cssVar: '--eff-uiS8-scrim', cssOff: 'transparent',
+      params: [
+        { label: 'Opacity', key: 'opacity', unit: '%', min: 0, max: 80, step: 1, value: 40 },
+      ],
+      template: (p) => `rgba(0, 0, 0, ${p.opacity / 100})` },
   ]}>
+    <div class="full-pm-stage">
     <div class="full-pm">
       <div class="full-pm-hd">
         <span class="full-pm-title">Project Manager</span>
@@ -586,6 +679,7 @@
           </div>
         </div>
       </div>
+    </div>
     </div>
   </Card>
 
@@ -709,7 +803,7 @@
     border: 1px solid var(--border);
     overflow: hidden;
     background: var(--surface);
-    box-shadow: 0 4px 16px rgba(0 0 0 / 0.10), 0 1px 4px rgba(0 0 0 / 0.08);
+    box-shadow: var(--eff-uiS1-drop, 0 4px 16px rgba(0 0 0 / 0.10)), var(--eff-uiS1-ambient, 0 1px 4px rgba(0 0 0 / 0.08));
   }
 
   /* ── Windows controls ── */
@@ -940,7 +1034,7 @@
     background: var(--surface);
     display: flex;
     flex-direction: column;
-    box-shadow: 0 8px 32px rgba(0 0 0 / 0.18), 0 2px 8px rgba(0 0 0 / 0.10);
+    box-shadow: var(--eff-uiS3-drop, 0 8px 32px rgba(0 0 0 / 0.18)), var(--eff-uiS3-ambient, 0 2px 8px rgba(0 0 0 / 0.10));
   }
 
   .wf-titlebar {
@@ -1215,7 +1309,7 @@
     border: none;
     background: transparent;
     color: var(--text-secondary);
-    font-size: 13px;
+    font-size: 12px;
     font-family: inherit;
     cursor: pointer;
     border-radius: 0;
@@ -1235,6 +1329,24 @@
     color: var(--accent);
   }
 
+  .mini-settings-panel {
+    width: 360px;
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    padding: 12px 14px;
+  }
+
+  .mini-settings-panel .settings-group {
+    gap: 2px;
+  }
+
+  .mini-settings-panel .settings-row {
+    gap: 12px;
+    min-height: 24px;
+  }
+
   .settings-content {
     flex: 1;
     padding: 20px;
@@ -1252,32 +1364,28 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
+    border-radius: var(--radius-sm);
+    padding: 2px 6px;
+    margin: 0 -6px;
+    transition: background 80ms;
   }
 
+  .settings-row:hover { background: color-mix(in srgb, var(--surface) 85%, black); }
+
   .settings-label {
-    font-size: 13px;
-    color: var(--text-primary);
+    font-size: 12px;
+    color: var(--text-secondary);
     flex-shrink: 0;
   }
 
-  .settings-select {
-    height: 26px;
-    padding: 0 8px;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--text-primary);
-    font-size: 12px;
-    font-family: inherit;
-    appearance: none;
-    cursor: pointer;
+  .settings-sel-wrap {
     min-width: 140px;
   }
 
   .settings-toggle {
     width: 36px;
-    height: 20px;
-    border-radius: 10px;
+    height: 16px;
+    border-radius: 6px;
     background: var(--border);
     position: relative;
     cursor: pointer;
@@ -1288,8 +1396,8 @@
   .settings-toggle::after {
     content: '';
     position: absolute;
-    width: 14px;
-    height: 14px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
     background: #fff;
     top: 3px;
@@ -1303,7 +1411,7 @@
   }
 
   .settings-toggle-on::after {
-    left: 19px;
+    left: 23px;
   }
 
   .settings-stepper {
@@ -1311,13 +1419,13 @@
     align-items: center;
     gap: 0;
     border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     overflow: hidden;
   }
 
   .step-btn {
     width: 26px;
-    height: 26px;
+    height: 22px;
     border: none;
     background: var(--surface);
     color: var(--text-secondary);
@@ -1330,7 +1438,7 @@
     font-family: inherit;
   }
 
-  .step-btn:hover { background: var(--surface-hover); color: var(--text-primary); }
+  .step-btn:hover { background: color-mix(in srgb, var(--surface) 85%, black); color: var(--text-primary); }
 
   .step-val {
     padding: 0 10px;
@@ -1339,7 +1447,7 @@
     color: var(--text-primary);
     border-left: 1px solid var(--border);
     border-right: 1px solid var(--border);
-    height: 26px;
+    height: 22px;
     display: flex;
     align-items: center;
     background: var(--surface-raised);
@@ -1397,7 +1505,7 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     padding: 4px 0;
-    box-shadow: 0 4px 16px rgba(0 0 0 / 0.12), 0 1px 4px rgba(0 0 0 / 0.08);
+    box-shadow: var(--eff-uiS7-drop, 0 4px 16px rgba(0 0 0 / 0.12)), var(--eff-uiS7-ambient, 0 1px 4px rgba(0 0 0 / 0.08));
   }
 
   .dp-menu-label {
@@ -1489,6 +1597,18 @@
   .dp-recent:hover { background: var(--surface-hover); color: var(--text-primary); }
 
   /* ── Project Manager — Full ── */
+  .full-pm-stage {
+    background: var(--eff-uiS8-scrim, rgba(0, 0, 0, 0.40));
+    padding: 40px 24px;
+    border-radius: 0 0 10px 10px;
+    transition: background 200ms;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+
   .full-pm {
     width: 800px;
     height: 825px;

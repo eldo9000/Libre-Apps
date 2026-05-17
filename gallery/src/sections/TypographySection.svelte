@@ -294,7 +294,7 @@
 </div>
 
 <style>
-  .section { max-width: 860px; }
+  .section { max-width: 1075px; }
 
   /* Section header row — title + font picker aligned on one line */
   .group-header {

@@ -219,7 +219,7 @@
 </div>
 
 <style>
-  .section { max-width: 900px; }
+  .section { max-width: 1125px; }
 
   .group-title {
     font-size: 22px;

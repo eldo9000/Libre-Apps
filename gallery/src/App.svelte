@@ -16,6 +16,7 @@
   import PatternsSection from './sections/PatternsSection.svelte';
   import MotionSection from './sections/MotionSection.svelte';
   import UIStandardsSection from './sections/UIStandardsSection.svelte';
+  import AudioSection from './sections/AudioSection.svelte';
   import FlickerSection from './sections/FlickerSection.svelte';
   import ShelfSection from './sections/ShelfSection.svelte';
   import StackSection from './sections/StackSection.svelte';
@@ -36,11 +37,12 @@
     { id: 'layout',     label: 'Layout',            component: LayoutSection,     tab: 'components'  },
     { id: 'media',      label: 'Media',             component: MediaSection,      tab: 'components'  },
     { id: 'loading',    label: 'Loading',           component: LoadingSection,    tab: 'components'  },
-    { id: 'typography', label: 'Typography',        component: TypographySection, tab: 'foundation'  },
-    { id: 'tokens',     label: 'Tokens',            component: TokensSection,     tab: 'foundation'  },
+    { id: 'typography', label: 'Typography',        component: TypographySection, tab: 'surface'     },
+    { id: 'tokens',     label: 'Tokens',            component: TokensSection,     tab: 'surface'     },
     { id: 'patterns',   label: 'Patterns',          component: PatternsSection,   tab: 'foundation'  },
-    { id: 'motion',     label: 'Motion',            component: MotionSection,     tab: 'foundation'  },
+    { id: 'motion',     label: 'Motion',            component: MotionSection,     tab: 'surface'     },
     { id: 'ui-standards', label: 'UI Standards',   component: UIStandardsSection, tab: 'foundation' },
+    { id: 'audio',        label: 'Audio',          component: AudioSection,        tab: 'surface'     },
     { id: 'app-flicker', label: 'Flicker',   component: FlickerSection,  tab: 'applications'  },
     { id: 'app-shelf',   label: 'Shelf',     component: ShelfSection,    tab: 'applications'  },
     { id: 'app-stack',   label: 'Stack',     component: StackSection,    tab: 'applications'  },
@@ -51,7 +53,8 @@
 
   const TABS_FOUNDATION = [
     { id: 'foundation',   label: 'Foundation' },
-    { id: 'components',   label: 'Components' },
+    { id: 'surface',      label: 'Surface'     },
+    { id: 'components',   label: 'Components'  },
   ];
 
   const TABS_APPS = [
@@ -579,7 +582,7 @@
       </div>
     </aside>
 
-    <MiniMap {contentEl} visible={activeTab === 'components' || activeTab === 'applications' || activeTab === 'foundation'} />
+    <MiniMap {contentEl} visible={activeTab === 'components' || activeTab === 'applications' || activeTab === 'foundation' || activeTab === 'surface'} />
 
     <main class="content" bind:this={contentEl} onmousemove={onAppMove} onmouseleave={onAppLeave}>
       {#each visibleSections as s}

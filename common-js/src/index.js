@@ -21,6 +21,8 @@ export { default as ScrollArea }        from './components/ScrollArea.svelte';
 export { default as SectionLabel }      from './components/SectionLabel.svelte';
 export { default as SegmentedControl }  from './components/SegmentedControl.svelte';
 export { default as Select }            from './components/Select.svelte';
+export { default as Stepper }           from './components/Stepper.svelte';
+export { default as Toggle }            from './components/Toggle.svelte';
 export { default as TabBar }            from './components/TabBar.svelte';
 export { default as Timecode }          from './components/Timecode.svelte';
 export { default as Toast }             from './components/Toast.svelte';

@@ -90,7 +90,7 @@
 </div>
 
 <style>
-  .section { max-width: 900px; }
+  .section { max-width: 1125px; }
 
   .pattern {
     display: grid;

@@ -1,6 +1,5 @@
 <script>
   import { onMount } from 'svelte';
-  import BezierEditor from '@libre/ui/src/components/BezierEditor.svelte';
 
   const colorGroups = [
     {
@@ -69,12 +68,6 @@
     { name: '--shadow-lg', label: 'lg' },
   ];
 
-  const motionTokens = [
-    { name: '--ease-linear', label: 'Linear'      },
-    { name: '--ease-hard',   label: 'Hard Ease'   },
-    { name: '--ease-out',    label: 'Gentle Ease' },
-  ];
-
   const zTokens = [
     { name: '--z-dropdown', label: 'Dropdown', value: 100 },
     { name: '--z-modal',    label: 'Modal',    value: 200 },
@@ -82,55 +75,7 @@
     { name: '--z-toast',    label: 'Toast',    value: 400 },
   ];
 
-  const MOTION_STORAGE_KEY = 'libre-motion-tokens';
-
-  const BEZIER_DEFAULTS = {
-    '--ease-linear': [1/3,  1/3,  2/3,  2/3 ],
-    '--ease-hard':   [0.9,  0,    0.1,  1   ],
-    '--ease-out':    [0.25, 0.46, 0.45, 0.94],
-  };
-  const DURATION_DEFAULTS = {
-    '--ease-linear': 600,
-    '--ease-hard':   600,
-    '--ease-out':    600,
-  };
-
-  function loadMotionStorage() {
-    try {
-      const raw = localStorage.getItem(MOTION_STORAGE_KEY);
-      if (!raw) return null;
-      return JSON.parse(raw);
-    } catch { return null; }
-  }
-
-  function saveMotionStorage() {
-    localStorage.setItem(MOTION_STORAGE_KEY, JSON.stringify({
-      beziers:   Object.fromEntries(Object.entries(savedBeziers).map(([k, v]) => [k, [...v]])),
-      durations: { ...durations },
-    }));
-  }
-
-  const _stored = loadMotionStorage();
-
   let hsvMap = $state({});
-
-  // Duration in ms per token — editable via the number input
-  let durations = $state(_stored?.durations ?? { ...DURATION_DEFAULTS });
-
-  // Live bezier values — editable via handle drag
-  let beziers = $state(
-    _stored?.beziers
-      ? Object.fromEntries(Object.entries(_stored.beziers).map(([k, v]) => [k, [...v]]))
-      : Object.fromEntries(Object.entries(BEZIER_DEFAULTS).map(([k, v]) => [k, [...v]]))
-  );
-
-  // Saved baseline — values committed via the Save button. Edits are
-  // "dirty" until saved; Cancel reverts to this snapshot.
-  let savedBeziers = $state(
-    _stored?.beziers
-      ? Object.fromEntries(Object.entries(_stored.beziers).map(([k, v]) => [k, [...v]]))
-      : Object.fromEntries(Object.entries(BEZIER_DEFAULTS).map(([k, v]) => [k, [...v]]))
-  );
 
   function rgbToHsv(r, g, b) {
     r /= 255; g /= 255; b /= 255;
@@ -246,20 +191,6 @@
     {/each}
   </div>
 
-  <!-- ── Motion ──────────────────────────────────────────────── -->
-  <h2 class="group-title">Motion</h2>
-  <div class="motion-row">
-    {#each motionTokens as t}
-      <BezierEditor
-        name={t.name}
-        bind:value={beziers[t.name]}
-        bind:savedValue={savedBeziers[t.name]}
-        bind:duration={durations[t.name]}
-        onSave={saveMotionStorage}
-      />
-    {/each}
-  </div>
-
   <!-- ── Z-index ─────────────────────────────────────────────── -->
   <h2 class="group-title">Z-Index</h2>
   <div class="z-row">
@@ -276,7 +207,7 @@
 </div>
 
 <style>
-  .section { max-width: 900px; }
+  .section { max-width: 1125px; }
 
   .group-title {
     font-size: 11px;
@@ -368,16 +299,6 @@
     background: var(--surface-raised);
   }
   .shadow-token { font-size: 9px; font-family: 'Geist Mono', monospace; color: var(--text-muted); }
-
-  /* ── Motion ── */
-  .motion-row {
-    display: flex;
-    gap: 32px;
-    align-items: flex-start;
-    width: max-content;
-    max-width: none;
-    flex-wrap: nowrap;
-  }
 
   /* ── Z-index ── */
   .z-row { display: flex; align-items: flex-end; gap: 24px; }

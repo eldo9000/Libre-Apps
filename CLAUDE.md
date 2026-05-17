@@ -85,6 +85,8 @@ CI for app repos needs `CARGO_DEPS_TOKEN` with read access to this repo. Bump th
 
 **`@libre/ui` (Svelte):** each app repo **vendors** `common-js/` as a snapshot at its root and references it via `"@libre/ui": "file:./common-js"`. When `common-js/` changes here, downstream repos need to re-sync. A helper script lives at `common-js/scripts/create-libre-app.js`.
 
+**Syncing updates to a downstream app:** see [`docs/sync-protocol.md`](docs/sync-protocol.md). This is the landing document for agents arriving from an app repo to pull in component or token updates.
+
 ---
 
 ## How to work on this repo

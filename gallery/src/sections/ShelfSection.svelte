@@ -343,7 +343,7 @@
 
 <style>
   /* ── Layout ─────────────────────────────────────────────────────────────── */
-  .section { max-width: 1100px; display: flex; flex-direction: column; gap: 20px; }
+  .section { max-width: 1375px; display: flex; flex-direction: column; gap: 20px; }
   .row     { width: 100%; }
   .cols    { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
 

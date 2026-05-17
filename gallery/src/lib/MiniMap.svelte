@@ -29,26 +29,6 @@
     return left;
   }
 
-  // Parse --accent from the root; fall back to the canonical #2884c9.
-  function accentRgb() {
-    const raw = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
-    const m   = raw.match(/#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i);
-    return m ? [parseInt(m[1],16), parseInt(m[2],16), parseInt(m[3],16)] : [40, 132, 201];
-  }
-
-  // Draw a single element as a filled rounded rect, clamped to minimap bounds.
-  function fillEl(ctx, el, yR, xS, color, radius = 1) {
-    if (!el.offsetWidth || !el.offsetHeight) return;
-    const x = elOffsetLeft(el) * xS;
-    const y = elOffsetTop(el)  * yR;
-    const w = Math.min(el.offsetWidth  * xS, W - x - 4);
-    const h = Math.max(1.5, el.offsetHeight * yR);
-    if (w < 1) return;
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.roundRect(Math.max(4, x), y, w, h, radius);
-    ctx.fill();
-  }
 
   function draw() {
     if (!canvas || !contentEl) return;
@@ -62,7 +42,6 @@
     const yR     = viewH / totalH;
     const xS     = (W - 8) / cW;
     const isDark = document.documentElement.classList.contains('dark');
-    const [ar, ag, ab] = accentRgb();
 
     canvas.width        = W * dpr;
     canvas.height       = viewH * dpr;
@@ -84,66 +63,39 @@
         const hH   = Math.max(3, h1.offsetHeight * yR);
         ctx.fillStyle = isDark ? 'rgba(255,255,255,0.28)' : 'rgba(0,0,0,0.20)';
         ctx.fillRect(4, hTop, W - 8, hH);
-        // Underline rule below h1
         ctx.fillStyle = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)';
         ctx.fillRect(4, hTop + hH, W - 8, 0.5);
       }
 
-      // ── Cards (sections that use the Card component) ──────────────────────
-      const cards = sec.querySelectorAll('.card');
-
-      if (cards.length === 0) {
-        // Fallback for card-free sections (e.g. Typography): walk two levels
-        // of children and draw them as nested block rects.
-        const root = sec.querySelector('.section') ?? sec;
-        for (const l1 of root.children) {
-          if (!l1.offsetHeight || l1.offsetHeight < 5) continue;
-          const l1x = Math.max(4, elOffsetLeft(l1) * xS);
-          const l1y = elOffsetTop(l1) * yR;
-          const l1w = Math.min(l1.offsetWidth * xS, W - l1x - 4);
-          const l1h = Math.max(2, l1.offsetHeight * yR);
-          if (l1w >= 2) {
-            ctx.fillStyle = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.035)';
-            ctx.beginPath();
-            ctx.roundRect(l1x, l1y, l1w, l1h, 1.5);
-            ctx.fill();
-          }
-          for (const l2 of l1.children) {
-            if (!l2.offsetHeight || l2.offsetHeight < 5) continue;
-            const l2x = Math.max(4, elOffsetLeft(l2) * xS);
-            const l2y = elOffsetTop(l2) * yR;
-            const l2w = Math.min(l2.offsetWidth * xS, W - l2x - 4);
-            const l2h = Math.max(1.5, l2.offsetHeight * yR);
-            if (l2w < 2) continue;
-            ctx.fillStyle = isDark ? 'rgba(255,255,255,0.075)' : 'rgba(0,0,0,0.065)';
-            ctx.beginPath();
-            ctx.roundRect(l2x, l2y, l2w, l2h, 1);
-            ctx.fill();
-          }
-        }
+      // ── Group titles (h2.group-title) ─────────────────────────────────────
+      for (const h2 of sec.querySelectorAll('h2.group-title')) {
+        const hTop = elOffsetTop(h2) * yR;
+        const hH   = Math.max(2, h2.offsetHeight * yR);
+        ctx.fillStyle = isDark ? 'rgba(255,255,255,0.16)' : 'rgba(0,0,0,0.12)';
+        ctx.beginPath();
+        ctx.roundRect(4, hTop, (W - 8) * 0.55, hH, 0.5);
+        ctx.fill();
       }
 
-      for (const card of cards) {
+      // ── Cards ──────────────────────────────────────────────────────────────
+      for (const card of sec.querySelectorAll('.card')) {
         const cTop = elOffsetTop(card) * yR;
         const cH   = Math.max(6, card.offsetHeight * yR);
         const cX   = Math.max(4, elOffsetLeft(card) * xS);
         const cWmm = Math.min(card.offsetWidth * xS, W - cX - 4);
         if (cWmm < 2) continue;
 
-        // Card body background
         ctx.fillStyle = isDark ? 'rgba(255,255,255,0.075)' : 'rgba(0,0,0,0.06)';
         ctx.beginPath();
         ctx.roundRect(cX, cTop, cWmm, cH, 2);
         ctx.fill();
 
-        // Card border
         ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.09)';
         ctx.lineWidth = 0.5;
         ctx.beginPath();
         ctx.roundRect(cX, cTop, cWmm, cH, 2);
         ctx.stroke();
 
-        // Card header strip
         const headerEl = card.querySelector('.card-header');
         const stripH   = headerEl
           ? Math.max(2.5, headerEl.offsetHeight * yR)
@@ -152,49 +104,6 @@
         ctx.beginPath();
         ctx.roundRect(cX, cTop, cWmm, stripH, [2, 2, 0, 0]);
         ctx.fill();
-
-        // ── UI elements inside .card-body ──────────────────────────────────
-        const body = card.querySelector('.card-body') ?? card;
-
-        // Buttons
-        const btnColor = `rgba(${ar},${ag},${ab},${isDark ? 0.5 : 0.42})`;
-        for (const el of body.querySelectorAll('button')) {
-          fillEl(ctx, el, yR, xS, btnColor, 1.5);
-        }
-
-        // Text-like inputs + selects + textareas
-        const inputColor = isDark ? 'rgba(255,255,255,0.20)' : 'rgba(0,0,0,0.13)';
-        for (const el of body.querySelectorAll(
-          'input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=color]), select, textarea'
-        )) {
-          fillEl(ctx, el, yR, xS, inputColor, 1.5);
-        }
-
-        // Range sliders — draw as a centered thin bar so they read as tracks
-        const sliderColor = `rgba(${ar},${ag},${ab},${isDark ? 0.38 : 0.30})`;
-        for (const el of body.querySelectorAll('input[type=range]')) {
-          if (!el.offsetWidth) continue;
-          const sx  = Math.max(4, elOffsetLeft(el) * xS);
-          const sw  = Math.min(el.offsetWidth * xS, W - sx - 4);
-          const sy  = elOffsetTop(el) * yR + Math.max(1, el.offsetHeight * yR) * 0.5 - 1;
-          ctx.fillStyle = sliderColor;
-          ctx.beginPath();
-          ctx.roundRect(sx, sy, Math.max(4, sw), 2, 1);
-          ctx.fill();
-        }
-
-        // Checkboxes + radios — tiny squares/circles
-        const checkColor = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.18)';
-        for (const el of body.querySelectorAll('input[type=checkbox], input[type=radio]')) {
-          if (!el.offsetWidth) continue;
-          const cx = Math.max(4, elOffsetLeft(el) * xS);
-          const cy = elOffsetTop(el) * yR;
-          const sz = Math.max(2, Math.min(el.offsetWidth * xS, el.offsetHeight * yR, 4));
-          ctx.fillStyle = checkColor;
-          ctx.beginPath();
-          ctx.roundRect(cx, cy, sz, sz, 0.5);
-          ctx.fill();
-        }
       }
 
       // Section divider
@@ -314,14 +223,14 @@
     position: absolute;
     inset-inline: 0;
     min-height: 20px;
-    background: color-mix(in srgb, var(--accent) 13%, transparent);
-    border-top: 1px solid color-mix(in srgb, var(--accent) 36%, transparent);
-    border-bottom: 1px solid color-mix(in srgb, var(--accent) 36%, transparent);
+    background: color-mix(in srgb, var(--text-primary) 10%, transparent);
+    border-top: 1px solid color-mix(in srgb, var(--text-primary) 20%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--text-primary) 20%, transparent);
     cursor: grab;
     pointer-events: all;
     transition: background 120ms;
   }
 
-  .mm-vp:hover  { background: color-mix(in srgb, var(--accent) 20%, transparent); }
-  .mm-vp:active { cursor: grabbing; background: color-mix(in srgb, var(--accent) 26%, transparent); }
+  .mm-vp:hover  { background: color-mix(in srgb, var(--text-primary) 16%, transparent); }
+  .mm-vp:active { cursor: grabbing; background: color-mix(in srgb, var(--text-primary) 22%, transparent); }
 </style>

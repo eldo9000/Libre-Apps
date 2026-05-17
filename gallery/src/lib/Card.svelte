@@ -1,8 +1,10 @@
 <script>
+  import { fly } from 'svelte/transition';
+  import { cubicOut } from 'svelte/easing';
   import { focus, setSingleFocus, toggleFocus, clearFocus } from './focus.svelte.js';
   import { canvas, PATTERNS } from './stores/canvas.svelte.js';
 
-  let { id, label, sourceFile = null, component = null, effects = null, children } = $props();
+  let { id, label, sourceFile = null, component = null, effects = null, flush = false, children } = $props();
 
   const isFocused = $derived(focus.cards.some(c => c.id === id));
 
@@ -60,41 +62,135 @@
   function onBrightnessClick(e) {
     e.stopPropagation();
     if (showBrightness) { showBrightness = false; return; }
-    // Position relative to .card (position:relative), corrected for CSS zoom scale
-    const btnRect  = e.currentTarget.getBoundingClientRect();
-    const cardEl   = e.currentTarget.closest('.card');
-    const cardRect = cardEl.getBoundingClientRect();
-    const scale    = cardRect.width / cardEl.offsetWidth;
-    brightnessPos  = {
-      top:  (btnRect.bottom - cardRect.top + 6) / scale,
-      left: (btnRect.left + btnRect.width / 2 - cardRect.left) / scale,
+    const btnRect = e.currentTarget.getBoundingClientRect();
+    brightnessPos = {
+      top:  btnRect.bottom + 6,
+      left: btnRect.left + btnRect.width / 2,
     };
     showBrightness = true;
   }
 
-  // Effects popover
-  let showEffects     = $state(false);
-  let effectsHideTimer;
-  let effectsBtnEl    = $state(null);
-  let effectsPos      = $state({ top: 0, left: 0 });
-
-  function onEffectsEnter() {
-    clearTimeout(effectsHideTimer);
-    if (effectsBtnEl) {
-      const btnRect  = effectsBtnEl.getBoundingClientRect();
-      const cardEl   = effectsBtnEl.closest('.card');
-      const cardRect = cardEl.getBoundingClientRect();
-      const scale    = cardRect.width / cardEl.offsetWidth;
-      effectsPos = {
-        top:  (btnRect.bottom - cardRect.top + 4) / scale,
-        left: (btnRect.left + btnRect.width / 2 - cardRect.left) / scale,
-      };
-    }
-    showEffects = true;
+  function hsvToRgb(h, s, v) {
+    s /= 100; v /= 100;
+    const k = (n) => (n + h / 60) % 6;
+    const f = (n) => v - v * s * Math.max(0, Math.min(k(n), 4 - k(n), 1));
+    return [Math.round(f(5) * 255), Math.round(f(3) * 255), Math.round(f(1) * 255)];
   }
-  function onEffectsLeave()  { effectsHideTimer = setTimeout(() => showEffects = false, 140); }
-  function onPopoverEnter()  { clearTimeout(effectsHideTimer); }
-  function onPopoverLeave()  { effectsHideTimer = setTimeout(() => showEffects = false, 140); }
+
+  // ── Generic effects always available on every card ──────────────
+  // bg-*        → applied to the canvas layer behind the component
+  // content-*   → applied to the wrapper around the component itself
+  // frame-shadow → box-shadow on the tight frame around the component
+  const GENERIC_EFFECTS = [
+    { label: 'Blur', _generic: true, type: 'bg-filter',
+      filterFn: (p) => `blur(${p.radius}px)`,
+      params: [{ label: 'Radius', key: 'radius', unit: 'px', min: 0, max: 10, step: 0.5, value: 0 }] },
+    { label: 'Overlay', _generic: true, type: 'bg-opacity',
+      params: [
+        { label: 'Amount', key: 'amount', unit: '%', min: 0, max: 100, step: 1,   value: 50  },
+        { label: 'Hue',    key: 'hue',   unit: '°', min: 0, max: 360, step: 1,   value: 0   },
+        { label: 'Sat',    key: 'sat',   unit: '%', min: 0, max: 100, step: 1,   value: 0   },
+        { label: 'Val',    key: 'val',   unit: '%', min: 0, max: 100, step: 1,   value: 100 },
+      ] },
+    { label: 'Outer shadow', _generic: true, type: 'frame-outer',
+      params: [
+        { label: 'Distance', key: 'y',       unit: 'px', min: 0, max: 30,  step: 1, value: 4  },
+        { label: 'Blur',     key: 'blur',    unit: 'px', min: 0, max: 40,  step: 1, value: 12 },
+        { label: 'Opacity',  key: 'opacity', unit: '%',  min: 0, max: 100, step: 1, value: 30 },
+      ] },
+    { label: 'Border glow', _generic: true, type: 'frame-shadow',
+      params: [
+        { label: 'Blur',    key: 'blur',    unit: 'px', min: 0, max: 40,  step: 1, value: 12 },
+        { label: 'Spread',  key: 'spread',  unit: 'px', min: 0, max: 10,  step: 1, value: 0  },
+        { label: 'Opacity', key: 'opacity', unit: '%',  min: 0, max: 100, step: 1, value: 60 },
+      ] },
+  ];
+
+  // Effects sidebar
+  let showEffects = $state(false);
+
+  function initEffects() {
+    const base = [
+      ...(effects ?? []).map(e => ({
+        ...e, enabled: true,
+        paramValues: Object.fromEntries((e.params ?? []).map(p => [p.key, p.value])),
+      })),
+      ...GENERIC_EFFECTS.map(e => ({
+        ...e, enabled: false,
+        paramValues: Object.fromEntries(e.params.map(p => [p.key, p.value])),
+      })),
+    ];
+    try {
+      const saved = JSON.parse(localStorage.getItem(`libre-eff-${id}`) ?? 'null');
+      if (saved) {
+        for (const e of base) {
+          const s = saved.find(s => s.label === e.label);
+          if (s) { e.enabled = s.enabled; e.paramValues = { ...e.paramValues, ...s.paramValues }; }
+        }
+      }
+    } catch {}
+    return base;
+  }
+
+  let effectStates = $state(initEffects());
+
+  // Persist effect states whenever they change
+  $effect(() => {
+    const toSave = effectStates.map(e => ({
+      label: e.label, enabled: e.enabled, paramValues: { ...e.paramValues },
+    }));
+    try { localStorage.setItem(`libre-eff-${id}`, JSON.stringify(toSave)); } catch {}
+  });
+
+  // CSS vars only — cascade to children for card-specific shadow effects
+  const cssVarStyle = $derived.by(() => {
+    return effectStates
+      .filter(e => e.cssVar)
+      .map(e => {
+        if (!e.enabled) return `${e.cssVar}: ${e.cssOff ?? '0 0 0 0 transparent'}`;
+        return e.template
+          ? `${e.cssVar}: ${e.template(e.paramValues)}`
+          : `${e.cssVar}: ${e.cssOn}`;
+      })
+      .join('; ');
+  });
+
+  // Background layer: canvas pattern + blur + color overlay (applied behind the component)
+  const cardBgStyle = $derived.by(() => {
+    const parts   = [cardBodyStyle].filter(Boolean);
+    const filters = [];
+    for (const e of effectStates) {
+      if (!e.enabled) continue;
+      if (e.type === 'bg-filter') filters.push(e.filterFn(e.paramValues));
+      if (e.type === 'bg-opacity') {
+        const [r, g, b] = hsvToRgb(e.paramValues.hue, e.paramValues.sat, e.paramValues.val);
+        parts.push(`background-color: rgba(${r},${g},${b},${e.paramValues.amount / 100})`);
+      }
+    }
+    if (filters.length) parts.push(`filter: ${filters.join(' ')}`);
+    return parts.filter(Boolean).join('; ');
+  });
+
+  // Frame: compose border glow + outer drop shadow on the tight wrapper around the component
+  const cardFrameStyle = $derived.by(() => {
+    const shadows = [];
+    const g = effectStates.find(e => e.type === 'frame-shadow' && e.enabled);
+    if (g) {
+      const v = g.paramValues;
+      shadows.push(`0 0 ${v.blur}px ${v.spread}px color-mix(in srgb, var(--accent) ${v.opacity}%, transparent)`);
+    }
+    const o = effectStates.find(e => e.type === 'frame-outer' && e.enabled);
+    if (o) {
+      const v = o.paramValues;
+      shadows.push(`0 ${v.y}px ${v.blur}px rgba(0,0,0,${v.opacity / 100})`);
+    }
+    return shadows.length ? `box-shadow: ${shadows.join(', ')}` : '';
+  });
+
+  function onEffectsClick(e) {
+    e.stopPropagation();
+    showEffects = !showEffects;
+  }
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
@@ -142,29 +238,30 @@
         </button>
       </div>
     {/if}
-    {#if effects !== null}
-      <button
-        bind:this={effectsBtnEl}
-        class="effects-btn"
-        onmouseenter={onEffectsEnter}
-        onmouseleave={onEffectsLeave}
-        onclick={e => e.stopPropagation()}
-        aria-label="View visual effects"
-      >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="12" y1="8" x2="12" y2="12"/>
-          <circle cx="12" cy="16" r="0.5" fill="currentColor"/>
-        </svg>
-      </button>
-    {/if}
+    <button
+      class="effects-btn"
+      class:effects-btn-active={showEffects}
+      onclick={onEffectsClick}
+      aria-label="View visual effects"
+    >
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <circle cx="12" cy="16" r="0.5" fill="currentColor"/>
+      </svg>
+    </button>
     <span class="focus-pip" class:active={isFocused} title={isFocused ? 'Focused — click to clear' : 'Click to focus'}>
       {isFocused ? '◉' : '○'}
     </span>
   </div>
   <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <div class="card-body" style={cardBodyStyle} onclick={handleBodyShiftClick}>
-    {@render children?.()}
+  <div class="card-body" class:effects-open={showEffects} style={cssVarStyle} onclick={handleBodyShiftClick}>
+    <div class="card-bg" style={cardBgStyle}></div>
+    <div class="card-content" class:flush>
+      <div class="card-frame" class:flush style={cardFrameStyle}>
+        {@render children?.()}
+      </div>
+    </div>
   </div>
   {#if showBrightness && onFoundation}
     <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -191,26 +288,43 @@
     </div>
   {/if}
 
-  {#if showEffects && effects !== null}
-    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+  {#if showEffects}
     <div
-      class="effects-popover"
-      style="top: {effectsPos.top}px; left: {effectsPos.left}px"
-      role="tooltip"
-      onmouseenter={onPopoverEnter}
-      onmouseleave={onPopoverLeave}
+      class="effects-sidebar"
+      transition:fly={{ x: 220, duration: 220, easing: cubicOut }}
     >
-      <div class="effects-hd">Visual Effects</div>
-      {#if effects.length}
-        {#each effects as e}
-          <div class="effects-row">
-            <span class="effects-label">{e.label}</span>
-            {#if e.value}<code class="effects-val">{e.value}</code>{/if}
-          </div>
-        {/each}
-      {:else}
-        <div class="effects-none">No additional effects</div>
-      {/if}
+      {#each effectStates as effect, i}
+        {#if effect._generic}
+          <label class="effects-row">
+            <input
+              type="checkbox"
+              class="effects-check"
+              bind:checked={effectStates[i].enabled}
+            />
+            <span class="effects-label">{effect.label}</span>
+          </label>
+          {#if effect.enabled && effect.params?.length}
+            <div class="effects-params">
+              {#each effect.params as param}
+                {@const pct = ((effectStates[i].paramValues[param.key] - param.min) / (param.max - param.min)) * 100}
+                <div class="eff-param-row">
+                  <span class="eff-param-lbl">{param.label}</span>
+                  <input
+                    type="range"
+                    min={param.min}
+                    max={param.max}
+                    step={param.step ?? 1}
+                    bind:value={effectStates[i].paramValues[param.key]}
+                    class="eff-slider"
+                    style="--pct: {pct}%"
+                  />
+                  <span class="eff-param-val">{effectStates[i].paramValues[param.key]}{param.unit ?? ''}</span>
+                </div>
+              {/each}
+            </div>
+          {/if}
+        {/if}
+      {/each}
     </div>
   {/if}
 
@@ -245,10 +359,17 @@
     border-radius: 10px;
     background: var(--surface-raised);
     transition: border-color 0.12s;
+    overflow: hidden;
   }
   .card.focused {
     border-color: var(--accent);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
+    box-shadow: var(--focus-ring, 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent));
+  }
+
+  .effects-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 3px 0;
   }
 
   .card-header {
@@ -333,7 +454,7 @@
 
   /* ── Brightness slider popup ── */
   .brightness-popup {
-    position: absolute;
+    position: fixed;
     z-index: 9999;
     display: flex;
     flex-direction: column;
@@ -380,7 +501,7 @@
   }
   .brightness-reset:hover { color: var(--text-primary); background: var(--surface-hover); }
 
-  /* ── Effects info button & popover ── */
+  /* ── Effects info button & sidebar ── */
   .effects-btn {
     width: 22px;
     height: 22px;
@@ -397,50 +518,64 @@
     transition: color 80ms;
   }
   .effects-btn:hover { color: var(--accent); }
+  .effects-btn-active { color: var(--accent); }
 
-  .effects-popover {
-    position: absolute;
-    z-index: 9999;
-    min-width: 280px;
-    background: var(--surface-raised);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0 0 0 / 0.16), 0 1px 4px rgba(0 0 0 / 0.10);
-    overflow: hidden;
-    transform: translateX(-50%);
+  .card-body.effects-open {
+    min-height: 152px;
   }
+
+  .effects-sidebar {
+    position: absolute;
+    top: 39px;
+    right: 0;
+    height: calc(100% - 39px);
+    width: 220px;
+    background: var(--surface-panel);
+    border-left: 1px solid var(--border);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    overflow-y: scroll;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .effects-sidebar::-webkit-scrollbar { width: 4px; }
+  .effects-sidebar::-webkit-scrollbar-track { background: transparent; }
+  .effects-sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
   .effects-none {
     font-size: 11px;
     color: var(--text-muted);
-    padding: 8px 10px;
+    padding: 10px 12px;
     font-style: italic;
-  }
-
-  .effects-hd {
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    padding: 7px 10px 5px;
-    border-bottom: 1px solid var(--border);
   }
 
   .effects-row {
     display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 5px 10px;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 12px;
     border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+    cursor: pointer;
+    transition: background 80ms;
   }
   .effects-row:last-child { border-bottom: none; }
+  .effects-row:hover { background: color-mix(in srgb, var(--surface-panel) 85%, black); }
+
+  .effects-check {
+    width: 13px;
+    height: 13px;
+    accent-color: var(--accent);
+    cursor: pointer;
+    flex-shrink: 0;
+    margin: 0;
+  }
 
   .effects-label {
     font-size: 11px;
     color: var(--text-secondary);
-    flex-shrink: 0;
+    flex: 1;
   }
 
   .effects-val {
@@ -449,6 +584,61 @@
     color: var(--text-muted);
     text-align: right;
     white-space: nowrap;
+  }
+
+  .effects-params {
+    padding: 2px 12px 8px 35px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+  }
+
+  .eff-param-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .eff-param-lbl {
+    font-size: 10px;
+    color: var(--text-muted);
+    width: 44px;
+    flex-shrink: 0;
+  }
+
+  .eff-slider {
+    flex: 1;
+    height: 2px;
+    appearance: none;
+    -webkit-appearance: none;
+    background: linear-gradient(to right, var(--accent) var(--pct), var(--border) var(--pct));
+    border-radius: 2px;
+    cursor: pointer;
+    outline: none;
+    min-width: 0;
+  }
+
+  .eff-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    background: var(--text-muted);
+    border: 2px solid var(--surface-panel);
+    cursor: pointer;
+    transition: background 80ms;
+  }
+
+  .eff-slider:hover::-webkit-slider-thumb { background: #fff; }
+
+  .eff-param-val {
+    font-size: 10px;
+    font-family: 'Geist Mono', monospace;
+    color: var(--text-muted);
+    width: 30px;
+    text-align: right;
+    flex-shrink: 0;
   }
 
   .focus-pip {
@@ -462,15 +652,49 @@
   .focus-pip.active { opacity: 1; color: var(--accent); }
 
   .card-body {
+    position: relative;
+    min-height: 88px;
+    border-radius: 0 0 10px 10px;
+    overflow: hidden;
+  }
+
+  .card-bg {
+    position: absolute;
+    inset: 0;
+    border-radius: 0 0 10px 10px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .card-content {
+    position: relative;
+    z-index: 1;
     padding: 28px 20px;
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 88px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .card-frame {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     gap: 12px;
     flex-wrap: wrap;
-    border-radius: 0 0 10px 10px;
-    overflow: hidden;
+    border-radius: 10px;
+  }
+
+  .card-content.flush {
+    padding: 0;
+    align-items: stretch;
+  }
+  .card-frame.flush {
+    width: 100%;
+    border-radius: 0;
+    gap: 0;
+    flex-wrap: nowrap;
   }
 
   /* Inspect overlay */

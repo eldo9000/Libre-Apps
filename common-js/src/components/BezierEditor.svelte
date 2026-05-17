@@ -20,13 +20,55 @@
   } = $props();
 
   const SVG_SIZE        = 120;
+  const ZOOM_INSET      = 30;   // when zoomed out, 0→1 maps to [ZOOM_INSET, SVG_SIZE - ZOOM_INSET]
+  const ZOOM_INNER      = SVG_SIZE - 2 * ZOOM_INSET; // 60 — width of the inner 0→1 box
   const LINEAR_EDITABLE = [1/3, 1/3, 2/3, 2/3];
 
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   const fmt   = (n) => (Math.round(n * 100) / 100).toFixed(2);
 
-  function bezierPath([x1, y1, x2, y2], size = SVG_SIZE) {
-    return `M 0,${size} C ${x1*size},${size - y1*size} ${x2*size},${size - y2*size} ${size},0`;
+  let zoomedOut = $state(false);
+
+  /** Map a bezier (x, y) — where (0,0) is bottom-left and (1,1) is top-right — to SVG coords. */
+  function toSvg(bx, by) {
+    if (zoomedOut) {
+      return { x: ZOOM_INSET + bx * ZOOM_INNER, y: (SVG_SIZE - ZOOM_INSET) - by * ZOOM_INNER };
+    }
+    return { x: bx * SVG_SIZE, y: (1 - by) * SVG_SIZE };
+  }
+
+  /** Convert pointer client coords (inside the SVG element) to bezier-space (x, y). */
+  function fromPointer(clientX, clientY, rect) {
+    const ex = (clientX - rect.left) / rect.width;
+    const ey = 1 - (clientY - rect.top) / rect.height;
+    if (zoomedOut) {
+      // SVG spans [-0.5, 1.5] in bezier-space when zoomed out
+      return { x: ex * 2 - 0.5, y: ey * 2 - 0.5 };
+    }
+    return { x: ex, y: ey };
+  }
+
+  /** Clamp a handle (x, y) to the editable range. X always [0,1] for CSS bezier validity. */
+  function clampHandle(x, y) {
+    const cx = clamp(x, 0, 1);
+    const cy = zoomedOut ? clamp(y, -0.5, 1.5) : clamp(y, 0, 1);
+    return [cx, cy];
+  }
+
+  function toggleZoom() {
+    zoomedOut = !zoomedOut;
+    if (!zoomedOut) {
+      // Pull handle Y values back into [0, 1] when leaving zoomed mode.
+      value = [value[0], clamp(value[1], 0, 1), value[2], clamp(value[3], 0, 1)];
+    }
+  }
+
+  function bezierPath([x1, y1, x2, y2]) {
+    const a  = toSvg(0, 0);
+    const b  = toSvg(1, 1);
+    const c1 = toSvg(x1, y1);
+    const c2 = toSvg(x2, y2);
+    return `M ${a.x},${a.y} C ${c1.x},${c1.y} ${c2.x},${c2.y} ${b.x},${b.y}`;
   }
   function bezierCss([x1, y1, x2, y2]) {
     return `cubic-bezier(${x1}, ${y1}, ${x2}, ${y2})`;
@@ -37,15 +79,20 @@
   function bezierCssReflected([x1, y1, x2, y2]) {
     return `cubic-bezier(${fmt(1 - x2)}, ${fmt(1 - y2)}, ${fmt(1 - x1)}, ${fmt(1 - y1)})`;
   }
-  function bezierHandles([x1, y1, x2, y2], size = SVG_SIZE) {
-    return { p1: { x: x1*size, y: size - y1*size }, p2: { x: x2*size, y: size - y2*size } };
+  function bezierHandles([x1, y1, x2, y2]) {
+    return { p1: toSvg(x1, y1), p2: toSvg(x2, y2) };
   }
 
   const isDirty = $derived(
     value[0] !== savedValue[0] || value[1] !== savedValue[1] ||
     value[2] !== savedValue[2] || value[3] !== savedValue[3]
   );
-  const h = $derived(bezierHandles(value));
+  const h          = $derived(bezierHandles(value));
+  const anchor0    = $derived(toSvg(0, 0));
+  const anchor1    = $derived(toSvg(1, 1));
+  const innerBoxX  = $derived(zoomedOut ? ZOOM_INSET : 0);
+  const innerBoxY  = $derived(zoomedOut ? ZOOM_INSET : 0);
+  const innerBoxSz = $derived(zoomedOut ? ZOOM_INNER : SVG_SIZE);
 
   function reset()  { value = [...LINEAR_EDITABLE]; }
   function cancel() { if (isDirty) value = [...savedValue]; }
@@ -98,7 +145,8 @@
       const tNorm = Math.min(1, (now - start) / duration);
       const x = reverse ? (1 - tNorm) : tNorm;
       const y = cubicBezierEasing(value)(x);
-      tracePos = { x: x * 120, y: (1 - y) * 120 };
+      const pt = toSvg(x, y);
+      tracePos = { x: pt.x, y: pt.y };
       if (tNorm < 1) {
         traceAnimId = requestAnimationFrame(step);
       } else {
@@ -134,19 +182,18 @@
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
     const r = svgRef.getBoundingClientRect();
-    const cursorX = (e.clientX - r.left) / r.width;
-    const cursorY = 1 - (e.clientY - r.top) / r.height;
-    drag = { idx, pointerId: e.pointerId, offX: cursorX - value[idx], offY: cursorY - value[idx + 1] };
+    const p = fromPointer(e.clientX, e.clientY, r);
+    drag = { idx, pointerId: e.pointerId, offX: p.x - value[idx], offY: p.y - value[idx + 1] };
   }
 
   function onHandleMove(e) {
     if (!drag || !svgRef) return;
     const r = svgRef.getBoundingClientRect();
-    const x = clamp((e.clientX - r.left) / r.width - drag.offX, 0, 1);
-    const y = clamp(1 - (e.clientY - r.top) / r.height - drag.offY, 0, 1);
+    const p = fromPointer(e.clientX, e.clientY, r);
+    const [cx, cy] = clampHandle(p.x - drag.offX, p.y - drag.offY);
     const b = [...value];
-    b[drag.idx]     = x;
-    b[drag.idx + 1] = y;
+    b[drag.idx]     = cx;
+    b[drag.idx + 1] = cy;
     value = b;
   }
 
@@ -171,13 +218,27 @@
       <line x1="0" y1={g} x2="120" y2={g} stroke="var(--border-subtle)" stroke-width="0.5"/>
     {/each}
     <rect x="0" y="0" width="120" height="120" fill="none" stroke="var(--border)" stroke-width="1"/>
-    <line x1="0" y1="120" x2="120" y2="0" stroke="var(--text-muted)" stroke-width="0.8" stroke-dasharray="3 3" opacity="0.4"/>
+    {#if zoomedOut}
+      <rect
+        x={innerBoxX} y={innerBoxY}
+        width={innerBoxSz} height={innerBoxSz}
+        fill="none"
+        stroke="var(--text-muted)"
+        stroke-width="0.8"
+        opacity="0.7"
+      />
+    {/if}
+    <line
+      x1={anchor0.x} y1={anchor0.y}
+      x2={anchor1.x} y2={anchor1.y}
+      stroke="var(--text-muted)" stroke-width="0.8" stroke-dasharray="3 3" opacity="0.4"
+    />
     <path d={bezierPath(value)} fill="none"
       stroke={isDirty ? 'var(--accent)' : '#fff'}
       stroke-width={isDirty ? 1.5 : 0.5}
     />
-    <line x1="0"   y1="120" x2={h.p1.x} y2={h.p1.y} stroke="var(--text-muted)" stroke-width="1" opacity="0.55"/>
-    <line x1="120" y1="0"   x2={h.p2.x} y2={h.p2.y} stroke="var(--text-muted)" stroke-width="1" opacity="0.55"/>
+    <line x1={anchor0.x} y1={anchor0.y} x2={h.p1.x} y2={h.p1.y} stroke="var(--text-muted)" stroke-width="1" opacity="0.55"/>
+    <line x1={anchor1.x} y1={anchor1.y} x2={h.p2.x} y2={h.p2.y} stroke="var(--text-muted)" stroke-width="1" opacity="0.55"/>
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <circle
       cx={h.p1.x} cy={h.p1.y}
@@ -204,8 +265,8 @@
       onpointerup={onHandleUp}
       onpointercancel={onHandleUp}
     />
-    <circle cx="0"   cy="120" r="2.5" fill="var(--text-muted)"/>
-    <circle cx="120" cy="0"   r="2.5" fill="var(--text-muted)"/>
+    <circle cx={anchor0.x} cy={anchor0.y} r="2.5" fill="var(--text-muted)"/>
+    <circle cx={anchor1.x} cy={anchor1.y} r="2.5" fill="var(--text-muted)"/>
     {#if tracePos}
       <circle
         cx={tracePos.x} cy={tracePos.y} r="3"
@@ -242,10 +303,9 @@
       >
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="17 1 21 5 17 9"/>
-          <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-          <polyline points="7 23 3 19 7 15"/>
-          <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <polyline points="7 7 2 12 7 17"/>
+          <polyline points="17 7 22 12 17 17"/>
         </svg>
       </button>
     </div>
@@ -297,6 +357,21 @@
         />
         <span class="be-dur-unit">s</span>
       </div>
+      <button
+        class="be-btn"
+        class:be-btn-active={zoomedOut}
+        onclick={toggleZoom}
+        aria-label="Toggle zoomed-out view"
+        title={zoomedOut ? 'Zoomed out: handles can extend past 0–1' : 'Zoom out to edit beyond 0–1'}
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 3 21 3 21 9"/>
+          <polyline points="9 21 3 21 3 15"/>
+          <line x1="21" y1="3"  x2="14" y2="10"/>
+          <line x1="3"  y1="21" x2="10" y2="14"/>
+        </svg>
+      </button>
     </div>
   </div>
 

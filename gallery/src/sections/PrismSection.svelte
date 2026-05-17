@@ -355,7 +355,7 @@
 
 <style>
   .section {
-    max-width: 1100px;
+    max-width: 1375px;
     display: flex;
     flex-direction: column;
     gap: 20px;

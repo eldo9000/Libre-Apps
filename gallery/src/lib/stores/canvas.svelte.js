@@ -1,8 +1,26 @@
+const CANVAS_KEY = 'libre-gallery-canvas';
+
+let _saved = null;
+try { _saved = JSON.parse(localStorage.getItem(CANVAS_KEY) ?? 'null'); } catch {}
+
 export const canvas = $state({
-  osMode:       'macos',
-  bgPattern:    'none',
-  bgBrightness: 0,       // -100 (darker) → 0 (default) → +100 (lighter)
-  activeTab:    'overview',
+  osMode:       _saved?.osMode       ?? 'macos',
+  bgPattern:    _saved?.bgPattern    ?? 'none',
+  bgBrightness: _saved?.bgBrightness ?? 0,
+  activeTab:    _saved?.activeTab    ?? 'overview',
+});
+
+$effect.root(() => {
+  $effect(() => {
+    try {
+      localStorage.setItem(CANVAS_KEY, JSON.stringify({
+        osMode:       canvas.osMode,
+        bgPattern:    canvas.bgPattern,
+        bgBrightness: canvas.bgBrightness,
+        activeTab:    canvas.activeTab,
+      }));
+    } catch {}
+  });
 });
 
 export const PATTERNS = {

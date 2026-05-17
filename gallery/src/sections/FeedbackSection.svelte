@@ -4,50 +4,74 @@
 
   let { toaster } = $props();
 
+  // TrafficLight
+  let tlState = $state('filled');
+
+  // ProgressBar
+  let pbState = $state('default');
+  const pbVariant     = $derived(pbState);
+  const heroValue     = $derived(pbState === 'success' ? 100 : pbState === 'error' ? 45 : 65);
+  const heroLabel     = $derived(
+    pbState === 'success' ? 'Installation complete' :
+    pbState === 'error'   ? 'Installation failed'   :
+    'Installing components…'
+  );
+
+  // Dialog
   let dialogSm = $state(false);
   let dialogMd = $state(false);
   let dialogLg = $state(false);
 </script>
 
 <div class="section">
-  <h2 class="group-title">TrafficLight</h2>
+
+  <div class="group-hd">
+    <h2 class="group-title">TrafficLight</h2>
+    <div class="state-toggle">
+      <button class:active={tlState === 'filled'}  onclick={() => tlState = 'filled'}>Filled</button>
+      <button class:active={tlState === 'outline'} onclick={() => tlState = 'outline'}>Outline</button>
+    </div>
+  </div>
   <div class="grid">
-    <Card id="TL-1" label="Filled" sourceFile="common-js/src/components/TrafficLight.svelte">
+    <Card id="TL-1" label="Traffic Light" sourceFile="common-js/src/components/TrafficLight.svelte">
       <div class="tl-row">
-        <TrafficLight state="gray" size={10} />
-        <TrafficLight state="green" size={10} />
-        <TrafficLight state="yellow" size={10} />
-        <TrafficLight state="red" size={10} />
-      </div>
-    </Card>
-    <Card id="TL-2" label="Outline" sourceFile="common-js/src/components/TrafficLight.svelte">
-      <div class="tl-row">
-        <TrafficLight state="green" variant="outline" size={10} />
-        <TrafficLight state="yellow" variant="outline" size={10} />
-        <TrafficLight state="red" variant="outline" size={10} />
+        {#if tlState === 'filled'}
+          <TrafficLight state="gray" size={10} />
+        {/if}
+        <TrafficLight state="green"  size={10} variant={tlState === 'outline' ? 'outline' : undefined} />
+        <TrafficLight state="yellow" size={10} variant={tlState === 'outline' ? 'outline' : undefined} />
+        <TrafficLight state="red"    size={10} variant={tlState === 'outline' ? 'outline' : undefined} />
       </div>
     </Card>
   </div>
 
-  <h2 class="group-title">ProgressBar</h2>
+  <div class="group-hd">
+    <h2 class="group-title">ProgressBar</h2>
+    <div class="state-toggle">
+      <button class:active={pbState === 'default'} onclick={() => pbState = 'default'}>Default</button>
+      <button class:active={pbState === 'success'} onclick={() => pbState = 'success'}>Success</button>
+      <button class:active={pbState === 'error'}   onclick={() => pbState = 'error'}>Error</button>
+    </div>
+  </div>
   <div class="grid">
-    <Card id="PB-1" label="Default / 65%">
-      <div class="pb-wrap"><ProgressBar value={65} /></div>
+    <Card id="PB-1" label="Standard" sourceFile="common-js/src/components/ProgressBar.svelte">
+      <div class="pb-wrap"><ProgressBar value={65} variant={pbVariant} /></div>
     </Card>
-    <Card id="PB-2" label="Success / 100%">
-      <div class="pb-wrap"><ProgressBar value={100} variant="success" /></div>
+    <Card id="PB-5" label="Thick" sourceFile="common-js/src/components/ProgressBar.svelte">
+      <div class="pb-wrap"><ProgressBar value={55} height="h-3" variant={pbVariant} /></div>
     </Card>
-    <Card id="PB-3" label="Error / 40%">
-      <div class="pb-wrap"><ProgressBar value={40} variant="error" /></div>
-    </Card>
-    <Card id="PB-4" label="Default / 0%">
-      <div class="pb-wrap"><ProgressBar value={0} /></div>
-    </Card>
-    <Card id="PB-5" label="Default / thick h-3">
-      <div class="pb-wrap"><ProgressBar value={55} height="h-3" /></div>
-    </Card>
-    <Card id="PB-6" label="Success / thick h-3">
-      <div class="pb-wrap"><ProgressBar value={80} variant="success" height="h-3" /></div>
+  </div>
+  <div class="prog-hero-row">
+    <Card id="PB-7" label="Hero">
+      <div class="prog-hero" class:prog-success={pbState === 'success'} class:prog-error={pbState === 'error'}>
+        <div class="prog-hero-track">
+          <div class="prog-hero-fill" style="--pct:{heroValue}%"></div>
+        </div>
+        <div class="prog-hero-footer">
+          <span class="prog-hero-lbl">{heroLabel}</span>
+          <span class="prog-hero-pct">{heroValue}%</span>
+        </div>
+      </div>
     </Card>
   </div>
 
@@ -136,10 +160,39 @@
       </Button>
     </Card>
   </div>
+
 </div>
 
 <style>
-  .section { max-width: 900px; }
+  .section { max-width: 1125px; }
+
+  /* Group header with state toggle */
+  .group-hd {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin: 32px 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .group-hd .group-title { margin: 0; padding: 0; border: none; }
+
+  .state-toggle { display: flex; gap: 2px; }
+  .state-toggle button {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 5px;
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background 80ms, color 80ms;
+  }
+  .state-toggle button:hover { color: var(--text-primary); }
+  .state-toggle button.active {
+    background: color-mix(in srgb, var(--surface) 75%, var(--text-primary));
+    color: var(--text-primary);
+  }
 
   .group-title {
     font-size: 22px;
@@ -158,16 +211,73 @@
     gap: 16px;
   }
 
-  .tl-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  .tl-row { display: flex; align-items: center; gap: 8px; }
+
+  /* ProgressBar standard */
+  .pb-wrap { width: 100%; padding: 0 4px; }
+
+  /* ProgressBar hero */
+  .prog-hero-row { margin-top: 16px; }
+  .prog-hero { width: 100%; }
+
+  .prog-hero-track {
+    height: 20px;
+    background: color-mix(in srgb, var(--surface) 60%, var(--border));
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    overflow: hidden;
+    box-sizing: border-box;
+    transition: border-color 200ms;
+  }
+  .prog-success .prog-hero-track { border-color: color-mix(in srgb, #22c55e 35%, var(--border)); }
+  .prog-error   .prog-hero-track { border-color: color-mix(in srgb, #ef4444 35%, var(--border)); }
+
+  .prog-hero-fill {
+    position: relative;
+    height: 100%;
+    width: var(--pct);
+    background: var(--accent);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: width 500ms cubic-bezier(0.4, 0, 0.2, 1), background 200ms;
+  }
+  .prog-success .prog-hero-fill { background: #22c55e; }
+  .prog-error   .prog-hero-fill { background: #ef4444; }
+
+  /* Scan line */
+  .prog-hero-fill::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    left: 0;
+    width: 2px;
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 1px;
+    animation: prog-scan 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  .prog-success .prog-hero-fill::after,
+  .prog-error   .prog-hero-fill::after { display: none; }
+
+  @keyframes prog-scan {
+    0%   { left: 0;    opacity: 0; }
+    6%   { opacity: 0.8; }
+    88%  { opacity: 0.5; }
+    100% { left: 100%; opacity: 0; }
   }
 
-  .pb-wrap {
-    width: 100%;
-    padding: 0 4px;
+  .prog-hero-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 7px;
   }
+  .prog-hero-lbl { font-size: 11px; color: var(--text-secondary); transition: color 200ms; }
+  .prog-hero-pct { font-size: 11px; font-variant-numeric: tabular-nums; color: var(--text-muted); transition: color 200ms; }
+  .prog-success .prog-hero-lbl,
+  .prog-success .prog-hero-pct { color: #22c55e; }
+  .prog-error   .prog-hero-lbl,
+  .prog-error   .prog-hero-pct { color: #ef4444; }
 
   .dialog-body {
     margin: 0;
