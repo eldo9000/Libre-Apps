@@ -92,8 +92,8 @@
     flex-direction: column;
     justify-content: center;
     align-items: stretch;
-    min-width: 144px;
-    padding: 4px 16px;
+    width: fit-content;
+    padding: 4px 10px;
     background: var(--surface-deep, rgb(12 12 12));
     border: 1px solid var(--border);
     border-radius: 4px;
@@ -110,7 +110,7 @@
     display: block;
     font-size: 15px;
     line-height: 1;
-    text-align: right;
+    text-align: left;
   }
   .tc-frames { text-align: center; }
 

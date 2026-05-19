@@ -16,6 +16,7 @@
   let {
     checked  = $bindable(false),
     disabled = false,
+    size     = 'md',
     onchange,
     class: extraClass = '',
   } = $props();
@@ -29,7 +30,7 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 <div
-  class="toggle {checked ? 'toggle-on' : ''} {disabled ? 'toggle-disabled' : ''} {extraClass}"
+  class="toggle toggle-{size} {checked ? 'toggle-on' : ''} {disabled ? 'toggle-disabled' : ''} {extraClass}"
   role="switch"
   aria-checked={checked}
   aria-disabled={disabled}
@@ -74,5 +75,23 @@
   .toggle-disabled {
     opacity: 0.4;
     cursor: not-allowed;
+  }
+
+  .toggle-lg {
+    width: 44px;
+    height: 24px;
+    border-radius: 7px;
+  }
+
+  .toggle-lg::after {
+    width: 17px;
+    height: 17px;
+    border-radius: 4px;
+    top: 3.5px;
+    left: 3.5px;
+  }
+
+  .toggle-lg.toggle-on::after {
+    left: 23.5px;
   }
 </style>

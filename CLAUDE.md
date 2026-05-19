@@ -305,6 +305,77 @@ Use `label` to confirm you have the right element. The right sidebar focus bar s
 
 ---
 
+## LibreWin Settings Panel (`LibreWinSection.svelte`)
+
+The gallery's LibreWin section (`gallery/src/sections/LibreWinSection.svelte`) is a full simulated OS settings UI. It is self-contained — all state, markup, and CSS live in that one file. All CSS classes are prefixed `lw-` to avoid collisions.
+
+### Overall structure
+
+```
+.lw-settings-wrap (700px fixed width, rounded border)
+  ├─ .lw-sidebar (160px, flex column)
+  │    ├─ .lw-sidebar-search  — Input component
+  │    ├─ .lw-nav             — group labels + nav buttons
+  │    └─ .lw-nav-advanced-wrap — expandable Advanced section
+  └─ .lw-pane (flex: 1, scrollable)
+       └─ {#if activeCategory === '...'} blocks — one per settings panel
+```
+
+### Adding or editing a settings panel
+
+Each panel is a `{:else if activeCategory === 'id'}` block inside `.lw-pane`. To add one:
+1. Add `{ id: 'myid', label: 'My Label', icon: '◈' }` to the appropriate group in the `categories` array (top of `<script>`).
+2. Add a `{:else if activeCategory === 'myid'}` block in the pane.
+3. Use the standard pane opener and field patterns (see below).
+
+### Field patterns
+
+```svelte
+<!-- Section opener -->
+<div class="lw-pane-header">
+  <h2 class="lw-pane-title">Panel Title</h2>
+  <p class="lw-pane-sub">One-line description.</p>
+</div>
+
+<!-- Section label (OUTPUT, INPUT, etc.) -->
+<div class="lw-section-label">Section Name</div>
+
+<!-- Field rows container -->
+<div class="lw-field-rows">
+
+  <!-- Label + control row (label left, control right) -->
+  <div class="lw-field-row">
+    <div>
+      <div class="lw-field-label">Field Name</div>
+      <div class="lw-field-hint">Optional hint text.</div>  <!-- optional -->
+    </div>
+    <!-- control: Toggle, SegmentedControl, Select, etc. -->
+  </div>
+
+  <!-- Full-width row (e.g. a Slider that spans the whole row) -->
+  <div class="lw-field-row">
+    <Slider label="Volume" size="lg" ... />
+  </div>
+
+</div>
+```
+
+`.lw-field-rows` renders each `.lw-field-row` as a flex row with `justify-content: space-between`, separated by a bottom border. The last row's border is suppressed automatically.
+
+### CSS conventions
+
+- All classes: `lw-*` prefix.
+- Never add a `--ir-*` or local token block. Use global tokens: `var(--surface)`, `var(--border)`, `var(--text-primary)`, `var(--text-secondary)`, `var(--text-muted)`, `var(--accent)`.
+- Hover surfaces: `color-mix(in srgb, var(--surface) 94%, var(--text-primary))` — adapts to both themes.
+- Spacing between section groups: `margin-top: 20px` on the `.lw-section-label`.
+- Do **not** use `width: 100%` or `width: max-content` on flex children inside `.lw-sidebar` — it creates a circular sizing dependency that blows out the sidebar width. Use `align-self: stretch` instead.
+
+### Sidebar nav gotcha
+
+`.lw-sidebar` uses a fixed `width: 160px`. Do not switch it to `max-content` — any child with `width: 100%` (buttons, inputs) will cause the browser to resolve the sidebar to the full panel width (820px). If the sidebar needs to grow, increase the pixel value explicitly.
+
+---
+
 ## Workflow
 
 - Don't burn tokens reading entire codebases — read this file, then `README.md`, then dive in for specific tasks.

@@ -1,5 +1,5 @@
 <script>
-  import { Input, Select, Checkbox, SegmentedControl, Toggle, Stepper } from '@libre/ui';
+  import { Input, Select, Checkbox, SegmentedControl, Toggle, Stepper, Slider } from '@libre/ui';
   import Card from '../lib/Card.svelte';
 
   // Input
@@ -27,6 +27,7 @@
   let sld2 = $state(72);
   let sld4 = $state(40);
   let sld5 = $state(72);
+  let sld6 = $state(58);
   let sliderState = $state('default');
   const sldDisabled = $derived(sliderState === 'disabled');
   const sldHover    = $derived(sliderState === 'hover');
@@ -44,6 +45,8 @@
   // Toggle
   let tgl1 = $state(false);
   let tgl2 = $state(true);
+  let tgl3 = $state(false);
+  let tgl4 = $state(true);
   let toggleState = $state('default');
   const tglDisabled = $derived(toggleState === 'disabled');
 
@@ -53,20 +56,6 @@
   let stp3 = $state(0);
   let stepperState = $state('default');
   const stpDisabled = $derived(stepperState === 'disabled');
-
-  // Progress
-  let prog1 = $state(65);
-  let prog2 = $state(65);
-  let progState = $state('default');
-  const heroDisplayPct = $derived(
-    progState === 'success' ? 100 :
-    progState === 'error'   ? 45  : prog2
-  );
-  const heroLabel = $derived(
-    progState === 'success' ? 'Installation complete' :
-    progState === 'error'   ? 'Installation failed'   :
-    'Installing components…'
-  );
 
   const selectItems = [
     { value: 'mp4', label: 'MP4' },
@@ -210,6 +199,9 @@
         <span class="sld-val">{sld5}%</span>
       </div>
     </Card>
+    <Card id="SLD-6" label="Component / Large" sourceFile="common-js/src/components/Slider.svelte">
+      <Slider size="lg" min={0} max={100} bind:value={sld6} showValue={false} disabled={sldDisabled} />
+    </Card>
   </div>
 
   <div class="group-hd">
@@ -254,6 +246,12 @@
     <Card id="TGL-2" label="On" sourceFile="common-js/src/components/Toggle.svelte">
       <Toggle bind:checked={tgl2} disabled={tglDisabled} />
     </Card>
+    <Card id="TGL-3" label="Large / Off" sourceFile="common-js/src/components/Toggle.svelte">
+      <Toggle size="lg" bind:checked={tgl3} disabled={tglDisabled} />
+    </Card>
+    <Card id="TGL-4" label="Large / On" sourceFile="common-js/src/components/Toggle.svelte">
+      <Toggle size="lg" bind:checked={tgl4} disabled={tglDisabled} />
+    </Card>
   </div>
 
   <div class="group-hd">
@@ -275,36 +273,6 @@
     </Card>
   </div>
 
-  <div class="group-hd">
-    <h2 class="group-title">Progress</h2>
-    <div class="state-toggle">
-      <button class:active={progState === 'default'} onclick={() => progState = 'default'}>Default</button>
-      <button class:active={progState === 'success'} onclick={() => progState = 'success'}>Success</button>
-      <button class:active={progState === 'error'}   onclick={() => progState = 'error'}>Error</button>
-    </div>
-  </div>
-  <div class="grid">
-    <Card id="PRG-1" label="Standard">
-      <div class="prog-wrap" class:prog-success={progState === 'success'} class:prog-error={progState === 'error'}>
-        <div class="prog-track">
-          <div class="prog-fill" style="--pct:{prog1}%"></div>
-        </div>
-      </div>
-    </Card>
-  </div>
-  <div class="prog-hero-row">
-    <Card id="PRG-2" label="Hero">
-      <div class="prog-hero-wrap" class:prog-success={progState === 'success'} class:prog-error={progState === 'error'}>
-        <div class="prog-hero-track">
-          <div class="prog-hero-fill" style="--pct:{heroDisplayPct}%"></div>
-        </div>
-        <div class="prog-hero-footer">
-          <span class="prog-hero-lbl">{heroLabel}</span>
-          <span class="prog-hero-pct">{heroDisplayPct}%</span>
-        </div>
-      </div>
-    </Card>
-  </div>
 
 </div>
 
@@ -340,7 +308,7 @@
     -webkit-appearance: none;
     width: 14px;
     height: 14px;
-    border-radius: 50%;
+    border-radius: 3px;
     background: var(--text-muted);
     border: 2px solid var(--surface);
     cursor: pointer;
@@ -416,84 +384,4 @@
     gap: 16px;
   }
 
-  /* Progress — standard */
-  .prog-wrap { width: 100%; max-width: 240px; }
-  .prog-track {
-    height: 4px;
-    background: var(--border);
-    border-radius: 2px;
-    overflow: hidden;
-  }
-  .prog-fill {
-    height: 100%;
-    width: var(--pct);
-    background: var(--accent);
-    border-radius: 2px;
-    transition: width 400ms ease, background 200ms;
-  }
-  .prog-success .prog-fill { background: #22c55e; }
-  .prog-error   .prog-fill { background: #ef4444; }
-
-  /* Progress — hero */
-  .prog-hero-row { margin-top: 16px; }
-  .prog-hero-wrap { width: 100%; }
-
-  .prog-hero-track {
-    height: 20px;
-    background: color-mix(in srgb, var(--surface) 60%, var(--border));
-    border: 1px solid var(--border);
-    border-radius: 7px;
-    overflow: hidden;
-    box-sizing: border-box;
-    transition: border-color 200ms;
-  }
-  .prog-success .prog-hero-track { border-color: color-mix(in srgb, #22c55e 35%, var(--border)); }
-  .prog-error   .prog-hero-track { border-color: color-mix(in srgb, #ef4444 35%, var(--border)); }
-
-  .prog-hero-fill {
-    position: relative;
-    height: 100%;
-    width: var(--pct);
-    background: var(--accent);
-    border-radius: 6px;
-    overflow: hidden;
-    transition: width 500ms cubic-bezier(0.4, 0, 0.2, 1), background 200ms;
-  }
-  .prog-success .prog-hero-fill { background: #22c55e; }
-  .prog-error   .prog-hero-fill { background: #ef4444; }
-
-  /* Scan line */
-  .prog-hero-fill::after {
-    content: '';
-    position: absolute;
-    top: 2px;
-    bottom: 2px;
-    left: 0;
-    width: 2px;
-    background: rgba(255, 255, 255, 0.6);
-    border-radius: 1px;
-    animation: prog-scan 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-  .prog-success .prog-hero-fill::after,
-  .prog-error   .prog-hero-fill::after { display: none; }
-
-  @keyframes prog-scan {
-    0%   { left: 0;    opacity: 0; }
-    6%   { opacity: 0.8; }
-    88%  { opacity: 0.5; }
-    100% { left: 100%; opacity: 0; }
-  }
-
-  .prog-hero-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 7px;
-  }
-  .prog-hero-lbl { font-size: 11px; color: var(--text-secondary); transition: color 200ms; }
-  .prog-hero-pct { font-size: 11px; font-variant-numeric: tabular-nums; color: var(--text-muted); transition: color 200ms; }
-  .prog-success .prog-hero-lbl,
-  .prog-success .prog-hero-pct { color: #22c55e; }
-  .prog-error .prog-hero-lbl,
-  .prog-error .prog-hero-pct   { color: #ef4444; }
 </style>

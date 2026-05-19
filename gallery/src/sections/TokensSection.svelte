@@ -7,7 +7,7 @@
 
   const STORAGE_KEY   = 'libre-theme-lab';
   const SWATCHES_KEY  = 'libre-theme-swatches';
-  const DEFAULTS = { accent: '#003f7d', deltaH: 0, deltaS: 0, deltaV: 0 };
+  const DEFAULTS = { accent: '#2884c9', deltaH: 0, deltaS: 0, deltaV: 0 };
 
   let saved          = $state(false);
   let savedSwatches  = $state(loadSwatches());
@@ -456,12 +456,12 @@
 <style>
   /* Theme switching — higher specificity (0-1-1) beats tokens.css :root (0-0-1) */
   :global(html:not(.dark)) {
-    --accent:       var(--accent-light,       #003f7d);
-    --accent-hover: var(--accent-light-hover, #003060);
+    --accent:       var(--accent-light,       #2884c9);
+    --accent-hover: var(--accent-light-hover, #2373b0);
   }
   :global(html.dark) {
-    --accent:       var(--accent-dark,        #003f7d);
-    --accent-hover: var(--accent-dark-hover,  #003060);
+    --accent:       var(--accent-dark,        #2884c9);
+    --accent-hover: var(--accent-dark-hover,  #2373b0);
   }
 
   .section { max-width: 1125px; }

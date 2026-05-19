@@ -12,6 +12,7 @@ export { default as WindowFrame } from './components/WindowFrame.svelte';
 export { default as Titlebar }    from './components/Titlebar.svelte';
 
 // Components
+export { default as ColorWheel }        from './components/ColorWheel.svelte';
 export { default as Button }            from './components/Button.svelte';
 export { default as Checkbox }          from './components/Checkbox.svelte';
 export { default as GlobalTabs }        from './components/GlobalTabs.svelte';
@@ -22,6 +23,7 @@ export { default as SectionLabel }      from './components/SectionLabel.svelte';
 export { default as SegmentedControl }  from './components/SegmentedControl.svelte';
 export { default as Select }            from './components/Select.svelte';
 export { default as Stepper }           from './components/Stepper.svelte';
+export { default as Slider }            from './components/Slider.svelte';
 export { default as Toggle }            from './components/Toggle.svelte';
 export { default as TabBar }            from './components/TabBar.svelte';
 export { default as Timecode }          from './components/Timecode.svelte';

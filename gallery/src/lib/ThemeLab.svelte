@@ -5,7 +5,7 @@
   let { dark = $bindable(false) } = $props();
 
   const STORAGE_KEY = 'libre-theme-lab';
-  const DEFAULTS = { accent: '#003f7d', deltaH: 0, deltaS: 0, deltaV: 0 };
+  const DEFAULTS = { accent: '#2884c9', deltaH: 0, deltaS: 0, deltaV: 0 };
 
   let saving    = $state(false);
   let loading   = $state(false);
@@ -110,7 +110,11 @@
   function loadDraft() {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) return { ...DEFAULTS, ...JSON.parse(stored) };
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.accent === '#003f7d') parsed.accent = DEFAULTS.accent;
+        return { ...DEFAULTS, ...parsed };
+      }
     } catch {}
     return { ...DEFAULTS };
   }
@@ -303,12 +307,12 @@
 <style>
   /* Theme switching — higher specificity (0-1-1) beats tokens.css :root (0-0-1) */
   :global(html:not(.dark)) {
-    --accent:       var(--accent-light,       #003f7d);
-    --accent-hover: var(--accent-light-hover, #003060);
+    --accent:       var(--accent-light,       #2884c9);
+    --accent-hover: var(--accent-light-hover, #2373b0);
   }
   :global(html.dark) {
-    --accent:       var(--accent-dark,        #003f7d);
-    --accent-hover: var(--accent-dark-hover,  #003060);
+    --accent:       var(--accent-dark,        #2884c9);
+    --accent-hover: var(--accent-dark-hover,  #2373b0);
   }
 
   .lab {
